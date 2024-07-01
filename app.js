@@ -1,65 +1,73 @@
 const express = require('express');
 const axios = require('axios');
-const path = require('path');
 const bodyParser = require('body-parser');
+const axiosRetry = require('axios-retry');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(bodyParser.urlencoded({ extended: true }));
-
-const openaiApiKey = process.env.OPENAI_API_KEY;
-
-app.get('/', (req, res) => {
-    res.render('index');
+// Configure Axios to retry failed requests
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return error.response ? axiosRetry.isRetryableError(error) : false;
+  }
 });
 
+app.set('view engine', 'ejs');
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Home page route
+app.get('/', (req, res) => {
+  res.render('index');
+});
+
+// Generate resume route
 app.post('/generate_resume', async (req, res) => {
-    const { firstName, lastName, email, phone, education, experience } = req.body;
+  const { firstName, lastName, email, phone, education, experience } = req.body;
 
-    if (!firstName || !lastName || !email || !phone || !education || !experience) {
-        return res.status(400).send('All fields are required');
-    }
+  if (!firstName || !lastName || !email || !phone || !education || !experience) {
+    return res.status(400).send('All fields are required');
+  }
 
-    const prompt = `
-        Generate concise bullet points for the following experience:
-        ${experience}
-        Ensure each bullet point is specific and clear, and avoid using any HTML tags.
-    `;
+  const prompt = `
+    Generate concise bullet points for the following experience:
+    ${experience}
+    Ensure each bullet point is specific and clear, and avoid using any HTML tags.
+  `;
 
-    try {
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: 'gpt-4',
-            messages: [
-                { role: 'system', content: 'You are a helpful assistant.' },
-                { role: 'user', content: prompt }
-            ]
-        }, {
-            headers: {
-                'Authorization': `Bearer ${openaiApiKey}`
-            }
-        });
+  try {
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: prompt }
+      ]
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      }
+    });
 
-        const experienceDescription = response.data.choices[0].message.content.trim();
-        const experiencePoints = experienceDescription.split('\n').map(point => point.replace(/^- /, '').trim());
+    const experienceDescription = response.data.choices[0].message.content.trim();
+    const experiencePoints = experienceDescription.split('\n').map(point => point.trim()).join('. ');
 
-        res.render('resume', {
-            firstName,
-            lastName,
-            email,
-            phone,
-            education,
-            experience: experiencePoints
-        });
-    } catch (error) {
-        console.error('Error generating description:', error);
-        res.status(500).send('Error generating description');
-    }
+    res.render('resume', {
+      firstName,
+      lastName,
+      email,
+      phone,
+      education,
+      experience: experiencePoints
+    });
+  } catch (error) {
+    console.error('Error generating description:', error);
+    res.status(500).send('Error generating description');
+  }
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
