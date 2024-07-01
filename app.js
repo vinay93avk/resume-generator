@@ -6,6 +6,8 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Use the OPENAI_API_KEY from the environment variables
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
