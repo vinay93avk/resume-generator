@@ -41,4 +41,4 @@ jobs:
             cd /home/ec2-user/resume-generator
             export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             npm install
-            pm2 restart all
+            pm2 start ecosystem.config.js --env production
