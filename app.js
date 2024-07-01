@@ -19,8 +19,8 @@ axiosRetry(axios, {
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Verify API Key is loaded
-console.log("Using API Key:", process.env.OPENAI_API_KEY);
+// Check API key at startup
+console.log(`Using API Key: ${process.env.OPENAI_API_KEY}`);  // Ensure the API key is correctly loaded
 
 // Home page route
 app.get('/', (req, res) => {
