@@ -2,7 +2,6 @@ const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
 const axiosRetry = require('axios-retry');
-require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,8 +18,8 @@ axiosRetry(axios, {
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Check API key at startup
-console.log(`Using API Key: ${process.env.OPENAI_API_KEY}`);  // Ensure the API key is correctly loaded
+// Hardcoded API Key
+const openaiApiKey = "sk-proj-pAWttIBMe1kQ8vcjYu42T3BlbkFJ1AtO9aTcSX3A7CJr27S6";
 
 // Home page route
 app.get('/', (req, res) => {
@@ -50,7 +49,7 @@ app.post('/generate_resume', async (req, res) => {
       ]
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        'Authorization': `Bearer ${openaiApiKey}`
       }
     });
 
