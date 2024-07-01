@@ -6,6 +6,7 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -31,7 +32,7 @@ app.post('/generate_resume', async (req, res) => {
       ]
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,  // Using environment variable
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
