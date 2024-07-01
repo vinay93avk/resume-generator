@@ -11,7 +11,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const openaiApiKey = "sk-proj-pAWttIBMe1kQ8vcjYu42T3BlbkFJ1AtO9aTcSX3A7CJr27S6"
+const openaiApiKey = process.env.OPENAI_API_KEY;
 
 app.get('/', (req, res) => {
     res.render('index');
