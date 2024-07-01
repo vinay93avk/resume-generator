@@ -19,6 +19,9 @@ axiosRetry(axios, {
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Verify API Key is loaded
+console.log("Using API Key:", process.env.OPENAI_API_KEY);
+
 // Home page route
 app.get('/', (req, res) => {
   res.render('index');
@@ -64,7 +67,7 @@ app.post('/generate_resume', async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating description:', error);
-    res.status(500).send('Error generating description');
+    res.status(500).send(`Error generating description: ${error.message}`);
   }
 });
 
