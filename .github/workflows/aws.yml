@@ -20,11 +20,6 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Check API Key Hash
-        run: echo "API Key Hash: $(echo ${{ secrets.OPENAI_API_KEY }} | sha256sum)"
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
       - name: Copy project files to the server
         uses: appleboy/scp-action@master
         with:
@@ -44,6 +39,6 @@ jobs:
           port: 22
           script: |
             cd /home/ec2-user/resume-generator
+            export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             npm install
             pm2 restart all
-            export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
