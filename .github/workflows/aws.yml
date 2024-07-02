@@ -28,7 +28,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: "."
-          target: "/home/ubuntu/resume-generator"
+          target: "/home/ec2-user/resume-generator"
 
       - name: Restart Node application
         uses: appleboy/ssh-action@master
@@ -38,7 +38,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            cd /home/ubuntu/resume-generator
+            cd /home/ec2-user/resume-generator
             export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             export DB_HOST=${{ secrets.DB_HOST }}
             export DB_USER=${{ secrets.DB_USER }}
