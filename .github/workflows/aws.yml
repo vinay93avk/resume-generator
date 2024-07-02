@@ -45,4 +45,5 @@ jobs:
             export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             export DB_NAME=${{ secrets.DB_NAME }}
             npm install bcrypt
+            npm install mysql@latest
             pm2 restart all
