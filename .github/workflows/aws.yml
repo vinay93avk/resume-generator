@@ -43,6 +43,10 @@ jobs:
           script: |
             cd /home/ec2-user/resume-generator
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             npm install
             pm2 reload ecosystem.config.js --env production
             pm2 restart all
