@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const app = express();
@@ -22,22 +22,11 @@ console.log(`DB_HOST: ${process.env.DB_HOST}`);
 console.log(`DB_USER: ${process.env.DB_USER}`);
 console.log(`DB_PASSWORD: ${process.env.DB_PASSWORD}`);
 console.log(`DB_NAME: ${process.env.DB_NAME}`);
-// MySQL connection setup
-const dbConfig = {
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
-};
-
-const connection = mysql.createConnection(dbConfig);
-
-connection.connect((err) => {
-  if (err) {
-    console.error('Error connecting to the database:', err);
-    return;
-  }
-  console.log('Connected to the database');
 });
 
 app.set('view engine', 'ejs');
@@ -48,49 +37,46 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  res.render('login');
-});
-
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-
-  const query = 'SELECT * FROM users WHERE email = ?';
-  connection.query(query, [email], async (err, results) => {
-    if (err) {
-      console.error('Error fetching user:', err);
-      return res.status(500).send('Error logging in');
-    }
-    if (results.length === 0) {
-      return res.status(400).send('User not found');
-    }
-
-    const user = results[0];
-    const match = await bcrypt.compare(password, user.password);
-    if (match) {
-      res.send('Login successful');
-    } else {
-      res.status(400).send('Invalid credentials');
-    }
-  });
+  res.render('login');  // Create 'login.ejs'
 });
 
 app.get('/signup', (req, res) => {
-  res.render('signup');
+  res.render('signup');  // Create 'signup.ejs'
 });
 
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const [rows] = await db.query('INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)', [firstName, lastName, username, email, hashedPassword, phone]);
+    res.send('User registered successfully!');
+  } catch (error) {
+    console.error('Error inserting user:', error);
+    res.status(500).send('Error signing up');
+  }
+});
 
-  const query = 'INSERT INTO users (firstName, lastName, username, email, password, phone) VALUES (?, ?, ?, ?, ?, ?)';
-  connection.query(query, [firstName, lastName, username, email, hashedPassword, phone], (err, results) => {
-    if (err) {
-      console.error('Error inserting user:', err);
-      return res.status(500).send('Error signing up');
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (rows.length === 0) {
+      return res.status(400).send('No user with that email');
     }
-    res.send('Signup successful');
-  });
+
+    const user = rows[0];
+    const match = await bcrypt.compare(password, user.hashed_password);
+    if (!match) {
+      return res.status(400).send('Incorrect password');
+    }
+
+    res.send('User logged in successfully!');
+  } catch (error) {
+    console.error('Error logging in:', error);
+    res.status(500).send('Error logging in');
+  }
 });
 
 app.post('/generate_resume', async (req, res) => {
