@@ -1,13 +1,14 @@
 const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
-const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
+const mysql = require('mysql2');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Use the OPENAI_API_KEY from the environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 if (!OPENAI_API_KEY) {
@@ -21,15 +22,17 @@ console.log(`DB_HOST: ${process.env.DB_HOST}`);
 console.log(`DB_USER: ${process.env.DB_USER}`);
 console.log(`DB_PASSWORD: ${process.env.DB_PASSWORD}`);
 console.log(`DB_NAME: ${process.env.DB_NAME}`);
-
-const db = mysql.createConnection({
+// MySQL connection setup
+const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
-});
+};
 
-db.connect((err) => {
+const connection = mysql.createConnection(dbConfig);
+
+connection.connect((err) => {
   if (err) {
     console.error('Error connecting to the database:', err);
     return;
@@ -48,58 +51,45 @@ app.get('/login', (req, res) => {
   res.render('login');
 });
 
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  const query = 'SELECT * FROM users WHERE email = ?';
+  connection.query(query, [email], async (err, results) => {
+    if (err) {
+      console.error('Error fetching user:', err);
+      return res.status(500).send('Error logging in');
+    }
+    if (results.length === 0) {
+      return res.status(400).send('User not found');
+    }
+
+    const user = results[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (match) {
+      res.send('Login successful');
+    } else {
+      res.status(400).send('Invalid credentials');
+    }
+  });
+});
+
 app.get('/signup', (req, res) => {
   res.render('signup');
 });
 
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, email, password, phone } = req.body;
-  if (!firstName || !lastName || !email || !password) {
-    return res.status(400).send('All fields except phone are required');
-  }
 
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const query = 'INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)';
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    db.query(query, [firstName, lastName, email, hashedPassword, phone], (err, result) => {
-      if (err) {
-        console.error('Error inserting user:', err);
-        return res.status(500).send('Error signing up');
-      }
-      res.send('Signup successful');
-    });
-  } catch (error) {
-    console.error('Error hashing password:', error);
-    res.status(500).send('Error signing up');
-  }
-});
-
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).send('All fields are required');
-  }
-
-  const query = 'SELECT * FROM users WHERE email = ?';
-  db.query(query, [email], async (err, results) => {
+  const query = 'INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)';
+  connection.query(query, [firstName, lastName, email, hashedPassword, phone], (err, results) => {
     if (err) {
-      console.error('Error fetching user:', err);
-      return res.status(500).send('Error logging in');
+      console.error('Error inserting user:', err);
+      return res.status(500).send('Error signing up');
     }
-
-    if (results.length === 0) {
-      return res.status(400).send('User not found');
-    }
-
-    const user = results[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).send('Incorrect password');
-    }
-
-    res.send('Login successful');
+    res.send('Signup successful');
   });
 });
 
