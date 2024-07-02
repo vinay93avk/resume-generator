@@ -42,11 +42,11 @@ jobs:
           port: 22
           script: |
             cd /home/ec2-user/resume-generator
-            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            export DB_HOST=${{ secrets.DB_HOST }}
+            export DB_USER=${{ secrets.DB_USER }}
+            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            export DB_NAME=${{ secrets.DB_NAME }}
             npm install
-            pm2 reload ecosystem.config.js --env production
+            pm2 restart ecosystem.config.js --env production
             pm2 restart all
