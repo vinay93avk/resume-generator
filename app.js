@@ -9,6 +9,13 @@ const port = process.env.PORT || 3000;
 // Use the OPENAI_API_KEY from the environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+if (!OPENAI_API_KEY) {
+  console.error('OPENAI_API_KEY is not defined');
+  process.exit(1);
+} else {
+  console.log(`Using OPENAI_API_KEY: ${OPENAI_API_KEY}`);
+}
+
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
