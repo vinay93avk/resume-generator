@@ -44,5 +44,5 @@ jobs:
             export DB_USER=${{ secrets.DB_USER }}
             export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             export DB_NAME=${{ secrets.DB_NAME }}
-            npm install
+            npm install bcrypt
             pm2 restart all
