@@ -17,6 +17,11 @@ if (!OPENAI_API_KEY) {
   console.log(`Using OPENAI_API_KEY: ${OPENAI_API_KEY}`);
 }
 
+console.log(`DB_HOST: ${process.env.DB_HOST}`);
+console.log(`DB_USER: ${process.env.DB_USER}`);
+console.log(`DB_PASSWORD: ${process.env.DB_PASSWORD}`);
+console.log(`DB_NAME: ${process.env.DB_NAME}`);
+
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -53,16 +58,21 @@ app.post('/signup', async (req, res) => {
     return res.status(400).send('All fields except phone are required');
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const query = 'INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)';
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const query = 'INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)';
 
-  db.query(query, [firstName, lastName, email, hashedPassword, phone], (err, result) => {
-    if (err) {
-      console.error('Error inserting user:', err);
-      return res.status(500).send('Error signing up');
-    }
-    res.send('Signup successful');
-  });
+    db.query(query, [firstName, lastName, email, hashedPassword, phone], (err, result) => {
+      if (err) {
+        console.error('Error inserting user:', err);
+        return res.status(500).send('Error signing up');
+      }
+      res.send('Signup successful');
+    });
+  } catch (error) {
+    console.error('Error hashing password:', error);
+    res.status(500).send('Error signing up');
+  }
 });
 
 app.post('/login', (req, res) => {
