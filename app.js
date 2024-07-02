@@ -79,12 +79,12 @@ app.get('/signup', (req, res) => {
 });
 
 app.post('/signup', async (req, res) => {
-  const { firstName, lastName, email, password, phone } = req.body;
+  const { firstName, lastName, username, email, password, phone } = req.body;
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const query = 'INSERT INTO users (firstName, lastName, email, password, phone) VALUES (?, ?, ?, ?, ?)';
-  connection.query(query, [firstName, lastName, email, hashedPassword, phone], (err, results) => {
+  const query = 'INSERT INTO users (firstName, lastName, username, email, password, phone) VALUES (?, ?, ?, ?, ?, ?)';
+  connection.query(query, [firstName, lastName, username, email, hashedPassword, phone], (err, results) => {
     if (err) {
       console.error('Error inserting user:', err);
       return res.status(500).send('Error signing up');
