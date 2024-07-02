@@ -16,6 +16,14 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
+app.get('/login', (req, res) => {
+  res.render('login');  // You need to create a 'login.ejs' view for this
+});
+
+app.get('/signup', (req, res) => {
+  res.render('signup');  // You need to create a 'signup.ejs' view for this
+});
+
 app.post('/generate_resume', async (req, res) => {
   const { firstName, lastName, email, phone, education, experience } = req.body;
 
