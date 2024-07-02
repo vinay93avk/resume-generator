@@ -5,10 +5,19 @@ module.exports = {
       watch: true,
       env: {
         "NODE_ENV": "development",
-        "OPENAI_API_KEY": process.env.OPENAI_API_KEY  // Ensure this line correctly assigns the environment variable
+        "OPENAI_API_KEY": process.env.OPENAI_API_KEY,
+        "DB_HOST": process.env.DB_HOST,
+        "DB_USER": process.env.DB_USER,
+        "DB_PASSWORD": process.env.DB_PASSWORD,
+        "DB_NAME": process.env.DB_NAME
       },
       env_production: {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "OPENAI_API_KEY": process.env.OPENAI_API_KEY,
+        "DB_HOST": process.env.DB_HOST,
+        "DB_USER": process.env.DB_USER,
+        "DB_PASSWORD": process.env.DB_PASSWORD,
+        "DB_NAME": process.env.DB_NAME
       }
     }]
   };
