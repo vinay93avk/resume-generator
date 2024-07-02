@@ -1,10 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
+const mysql = require('mysql2');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const saltRounds = 10;
 
 // Use the OPENAI_API_KEY from the environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -19,16 +22,41 @@ if (!OPENAI_API_KEY) {
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// MySQL connection
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+});
+
+db.connect(err => {
+    if (err) throw err;
+    console.log('Connected to the MySQL database.');
+});
+
 app.get('/', (req, res) => {
   res.render('index');
 });
 
 app.get('/login', (req, res) => {
-  res.render('login');  // You need to create a 'login.ejs' view for this
+  res.render('login');
 });
 
 app.get('/signup', (req, res) => {
-  res.render('signup');  // You need to create a 'signup.ejs' view for this
+  res.render('signup');
+});
+
+app.post('/signup', (req, res) => {
+  const { firstName, lastName, email, password, phone } = req.body;
+  bcrypt.hash(password, saltRounds, (err, hash) => {
+    if (err) throw err;
+    const sql = 'INSERT INTO users (username, email, hashed_password, phone) VALUES (?, ?, ?, ?)';
+    db.query(sql, [`${firstName} ${lastName}`, email, hash, phone], (err, result) => {
+      if (err) throw err;
+      res.send('User registered successfully');
+    });
+  });
 });
 
 app.post('/generate_resume', async (req, res) => {
