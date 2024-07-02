@@ -28,7 +28,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: "."
-          target: "/home/ec2-user/resume-generator"
+          target: "/home/ubuntu/resume-generator"
 
       - name: Restart Node application
         uses: appleboy/ssh-action@master
@@ -38,12 +38,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            cd /home/ec2-user/resume-generator
+            cd /home/ubuntu/resume-generator
             export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             export DB_HOST=${{ secrets.DB_HOST }}
             export DB_USER=${{ secrets.DB_USER }}
             export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             export DB_NAME=${{ secrets.DB_NAME }}
-            npm install bcrypt
-            npm install mysql@latest
             pm2 restart all
