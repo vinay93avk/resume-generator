@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # or any other branch you want to deploy from
+      - main
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  # Match this with your production Node.js version
+          node-version: '20'
 
       - name: Install npm dependencies
         run: npm install
@@ -39,9 +39,7 @@ jobs:
           port: 22
           script: |
             cd /home/ec2-user/resume-generator
-            export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            export DB_HOST=${{ secrets.DB_HOST }}
-            export DB_USER=${{ secrets.DB_USER }}
-            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            export DB_NAME=${{ secrets.DB_NAME }}
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            npm install
+            pm2 reload ecosystem.config.js --env production
             pm2 restart all
