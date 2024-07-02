@@ -1,15 +1,21 @@
 const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
+const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
-const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Use the OPENAI_API_KEY from the environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+const dbConfig = {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+};
 
 if (!OPENAI_API_KEY) {
   console.error('OPENAI_API_KEY is not defined');
@@ -18,15 +24,15 @@ if (!OPENAI_API_KEY) {
   console.log(`Using OPENAI_API_KEY: ${OPENAI_API_KEY}`);
 }
 
-console.log(`DB_HOST: ${process.env.DB_HOST}`);
-console.log(`DB_USER: ${process.env.DB_USER}`);
-console.log(`DB_PASSWORD: ${process.env.DB_PASSWORD}`);
-console.log(`DB_NAME: ${process.env.DB_NAME}`);
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+const connection = mysql.createConnection(dbConfig);
+
+connection.connect(error => {
+  if (error) {
+    console.error('Error connecting to the database:', error);
+    process.exit(1);
+  } else {
+    console.log('Connected to the database');
+  }
 });
 
 app.set('view engine', 'ejs');
@@ -37,46 +43,57 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  res.render('login');  // Create 'login.ejs'
+  res.render('login');
 });
 
 app.get('/signup', (req, res) => {
-  res.render('signup');  // Create 'signup.ejs'
+  res.render('signup');
 });
 
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
-
+  
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [rows] = await db.query('INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)', [firstName, lastName, username, email, hashedPassword, phone]);
-    res.send('User registered successfully!');
+    const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
+    const values = [firstName, lastName, username, email, hashedPassword, phone];
+    
+    connection.query(query, values, (error, results) => {
+      if (error) {
+        console.error('Error inserting user:', error);
+        return res.status(500).send('Error inserting user');
+      }
+      res.send('User signed up successfully');
+    });
   } catch (error) {
-    console.error('Error inserting user:', error);
+    console.error('Error signing up:', error);
     res.status(500).send('Error signing up');
   }
 });
 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
-  try {
-    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (rows.length === 0) {
-      return res.status(400).send('No user with that email');
+  
+  const query = 'SELECT * FROM users WHERE email = ?';
+  connection.query(query, [email], async (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
     }
 
-    const user = rows[0];
-    const match = await bcrypt.compare(password, user.hashed_password);
-    if (!match) {
-      return res.status(400).send('Incorrect password');
+    if (results.length === 0) {
+      return res.status(401).send('Invalid email or password');
     }
 
-    res.send('User logged in successfully!');
-  } catch (error) {
-    console.error('Error logging in:', error);
-    res.status(500).send('Error logging in');
-  }
+    const user = results[0];
+    const passwordMatch = await bcrypt.compare(password, user.hashed_password);
+
+    if (!passwordMatch) {
+      return res.status(401).send('Invalid email or password');
+    }
+
+    res.send('Login successful');
+  });
 });
 
 app.post('/generate_resume', async (req, res) => {
@@ -120,6 +137,20 @@ app.post('/generate_resume', async (req, res) => {
     console.error('Error generating description:', error);
     res.status(500).send('Error generating description');
   }
+});
+
+app.get('/user-count', (req, res) => {
+  const query = 'SELECT COUNT(*) AS count FROM users';
+  
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    const count = results[0].count;
+    res.json({ userCount: count });
+  });
 });
 
 app.listen(port, () => {
