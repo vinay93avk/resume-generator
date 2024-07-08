@@ -61,9 +61,9 @@ app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
   
   if (!email.endsWith('@eagles.oc.edu')) {
-    return res.status(400).send('Email must be an eagles.oc.edu email address');
+    return res.status(400).send('Please enter valid OC email');
   }
-
+  
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
@@ -116,13 +116,14 @@ app.get('/resume', (req, res) => {
 });
 
 app.post('/generate_resume', async (req, res) => {
-  const { firstName, lastName, email, phone, education, experience, skills, linkedUrl } = req.body;
+  const { education, experience, skills, linkedUrl } = req.body;
+  const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !education || !experience || !skills) {
+  if (!firstName || !lastName || !email || !phone || !education || !experience) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience} years of experience, ${education}, and skills in ${skills}.`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${education}, and skills in ${skills}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -144,27 +145,25 @@ app.post('/generate_resume', async (req, res) => {
       .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
       .filter(line => line.trim() !== '.');
 
-    const resumeData = {
-      firstName,
-      lastName,
-      email,
-      phone,
-      education,
-      experience: experiencePoints.join('\n'),
-      skills,
-      linkedUrl
-    };
+    const user = req.session.user;
 
-    // Save resume to database
-    const saveQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const saveValues = [req.session.user.id, firstName, lastName, email, phone, education, experiencePoints.join('\n'), skills, linkedUrl];
-
-    connection.query(saveQuery, saveValues, (error, results) => {
+    const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const resumeValues = [user.id, firstName, lastName, email, phone, education, experiencePoints.join(' '), skills, linkedUrl];
+    connection.query(insertResumeQuery, resumeValues, (error, results) => {
       if (error) {
         console.error('Error saving resume:', error);
         return res.status(500).send('Error saving resume');
       }
-      res.render('generated_resume', resumeData);
+      res.render('generated_resume', {
+        firstName,
+        lastName,
+        email,
+        phone,
+        education,
+        experience: experiencePoints,
+        skills,
+        linkedUrl
+      });
     });
   } catch (error) {
     console.error('Error generating description:', error);
@@ -195,30 +194,97 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// API to get user details by email
-app.get('/user/:email/:field', (req, res) => {
-  const { email, field } = req.params;
-
-  const validFields = ['education', 'experience', 'skills', 'email', 'phone', 'linkedUrl'];
-  if (!validFields.includes(field)) {
-    return res.status(400).send('Invalid field');
-  }
-
-  const query = `SELECT ${field} FROM resumes WHERE email = ?`;
+app.get('/user/:email/education', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT education FROM resumes WHERE email = ?';
+  
   connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-
+    
     if (results.length === 0) {
-      return res.status(404).send('User not found');
+      return res.status(404).send('No education found for the given email');
     }
+    
+    res.json({ education: results[0].education });
+  });
+});
 
-    res.json({ [field]: results[0][field] });
+app.get('/user/:email/experience', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT experience FROM resumes WHERE email = ?';
+  
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).send('No experience found for the given email');
+    }
+    
+    res.json({ experience: results[0].experience });
+  });
+});
+
+app.get('/user/:email/skills', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT skills FROM resumes WHERE email = ?';
+  
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).send('No skills found for the given email');
+    }
+    
+    res.json({ skills: results[0].skills });
+  });
+});
+
+app.get('/user/:email/phone', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT phone FROM resumes WHERE email = ?';
+  
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).send('No phone found for the given email');
+    }
+    
+    res.json({ phone: results[0].phone });
+  });
+});
+
+app.get('/user/:email/linkedin', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
+  
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).send('No LinkedIn URL found for the given email');
+    }
+    
+    res.json({ linkedUrl: results[0].linkedUrl });
   });
 });
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
+
