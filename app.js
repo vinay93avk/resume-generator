@@ -61,7 +61,7 @@ app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
   
   if (!email.endsWith('@eagles.oc.edu')) {
-    return res.status(400).send('Email must be an @eagles.oc.edu address');
+    return res.status(400).send('Email must be an eagles.oc.edu email address');
   }
 
   try {
@@ -116,13 +116,13 @@ app.get('/resume', (req, res) => {
 });
 
 app.post('/generate_resume', async (req, res) => {
-  const { education, experience, skills } = req.body;
+  const { firstName, lastName, email, phone, education, experience, skills, linkedUrl } = req.body;
 
-  if (!education || !experience || !skills) {
+  if (!firstName || !lastName || !email || !phone || !education || !experience || !skills) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience}, a ${education}, and skills in ${skills}.`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience} years of experience, ${education}, and skills in ${skills}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -144,25 +144,27 @@ app.post('/generate_resume', async (req, res) => {
       .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
       .filter(line => line.trim() !== '.');
 
-    // Save the resume to the database
-    const user = req.session.user;
-    const saveResumeQuery = 'INSERT INTO resumes (username, education, experience, skills) VALUES (?, ?, ?, ?)';
-    const resumeValues = [user.username, education, experiencePoints.join('\n'), skills];
-    connection.query(saveResumeQuery, resumeValues, (error) => {
+    const resumeData = {
+      firstName,
+      lastName,
+      email,
+      phone,
+      education,
+      experience: experiencePoints.join('\n'),
+      skills,
+      linkedUrl
+    };
+
+    // Save resume to database
+    const saveQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const saveValues = [req.session.user.id, firstName, lastName, email, phone, education, experiencePoints.join('\n'), skills, linkedUrl];
+
+    connection.query(saveQuery, saveValues, (error, results) => {
       if (error) {
         console.error('Error saving resume:', error);
         return res.status(500).send('Error saving resume');
       }
-      res.render('generated_resume', {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        education,
-        skills,
-        experience: experiencePoints,
-        linkedin: req.body.linkedin
-      });
+      res.render('generated_resume', resumeData);
     });
   } catch (error) {
     console.error('Error generating description:', error);
@@ -193,70 +195,27 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// Add new routes to get user details
-app.get('/user/:username/education', (req, res) => {
-  const query = 'SELECT education FROM resumes WHERE username = ?';
-  connection.query(query, [req.params.username], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-    res.json(results);
-  });
-});
+// API to get user details by email
+app.get('/user/:email/:field', (req, res) => {
+  const { email, field } = req.params;
 
-app.get('/user/:username/skills', (req, res) => {
-  const query = 'SELECT skills FROM resumes WHERE username = ?';
-  connection.query(query, [req.params.username], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-    res.json(results);
-  });
-});
+  const validFields = ['education', 'experience', 'skills', 'email', 'phone', 'linkedUrl'];
+  if (!validFields.includes(field)) {
+    return res.status(400).send('Invalid field');
+  }
 
-app.get('/user/:username/experience', (req, res) => {
-  const query = 'SELECT experience FROM resumes WHERE username = ?';
-  connection.query(query, [req.params.username], (error, results) => {
+  const query = `SELECT ${field} FROM resumes WHERE email = ?`;
+  connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    res.json(results);
-  });
-});
 
-app.get('/user/:username/email', (req, res) => {
-  const query = 'SELECT email FROM users WHERE username = ?';
-  connection.query(query, [req.params.username], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
+    if (results.length === 0) {
+      return res.status(404).send('User not found');
     }
-    res.json(results);
-  });
-});
 
-app.get('/user/:username/phone', (req, res) => {
-  const query = 'SELECT phone FROM users WHERE username = ?';
-  connection.query(query, [req.params.username], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-    res.json(results);
-  });
-});
-
-app.get('/user/:username/linkedin', (req, res) => {
-  const query = 'SELECT linkedin FROM resumes WHERE username = ?';
-  connection.query(query, [req.params.username], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-    res.json(results);
+    res.json({ [field]: results[0][field] });
   });
 });
 

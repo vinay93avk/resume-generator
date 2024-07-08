@@ -2,24 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Input Form</title>
+    <title>Resume Generator</title>
 </head>
 <body>
     <h1>Resume Input Form</h1>
     <form action="/generate_resume" method="post">
-        <input type="text" name="firstName" placeholder="First Name" value="<%= user.firstName %>" required><br>
-        <input type="text" name="lastName" placeholder="Last Name" value="<%= user.lastName %>" required><br>
-        <input type="email" name="email" placeholder="Email" value="<%= user.email %>" required><br>
+        <input type="hidden" name="firstName" value="<%= user.firstName %>" required><br>
+        <input type="hidden" name="lastName" value="<%= user.lastName %>" required><br>
+        <input type="hidden" name="email" value="<%= user.email %>" required><br>
         <input type="text" name="phone" placeholder="Phone" value="<%= user.phone %>" required><br>
         <input type="text" name="education" placeholder="Education" required><br>
         <textarea name="experience" placeholder="Experience" required></textarea><br>
-        <input type="text" name="skills" placeholder="Skills" required><br>
-        <input type="text" name="linkedin" placeholder="LinkedIn URL"><br>
+        <textarea name="skills" placeholder="Skills" required></textarea><br>
+        <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
         <button type="submit">Generate Resume</button>
     </form>
-    <form action="/logout" method="post">
-        <button type="submit">Logout</button>
-    </form>
+    <p><a href="/logout">Logout</a></p>
 </body>
 </html>
