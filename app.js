@@ -112,13 +112,13 @@ app.get('/resume', (req, res) => {
 });
 
 app.post('/generate_resume', async (req, res) => {
-  const { firstName, lastName, email, phone, education, experience } = req.body;
+  const { firstName, lastName, email, phone, education, experience, skills } = req.body;
 
-  if (!firstName || !lastName || !email || !phone || !education || !experience) {
+  if (!firstName || !lastName || !email || !phone || !education || !experience || !skills) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the following experience and education. Experience: ${experience}. Education: ${education}.`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience} years of experience, a ${education}, and skills in ${skills}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -146,7 +146,8 @@ app.post('/generate_resume', async (req, res) => {
       email,
       phone,
       education,
-      experience: experiencePoints
+      experience: experiencePoints,
+      skills
     });
   } catch (error) {
     console.error('Error generating description:', error);
