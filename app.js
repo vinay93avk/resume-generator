@@ -59,16 +59,16 @@ app.get('/signup', (req, res) => {
 
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
-
+  
   if (!email.endsWith('@eagles.oc.edu')) {
-    return res.status(400).send('Email must end with @eagles.oc.edu');
+    return res.status(400).send('Email must be an @eagles.oc.edu address');
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
     const values = [firstName, lastName, username, email, hashedPassword, phone];
-
+    
     connection.query(query, values, (error, results) => {
       if (error) {
         console.error('Error inserting user:', error);
@@ -84,7 +84,7 @@ app.post('/signup', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
+  
   const query = 'SELECT * FROM users WHERE email = ?';
   connection.query(query, [email], async (error, results) => {
     if (error) {
@@ -116,13 +116,13 @@ app.get('/resume', (req, res) => {
 });
 
 app.post('/generate_resume', async (req, res) => {
-  const { firstName, lastName, email, phone, education, experience, skills, linkedin } = req.body;
+  const { education, experience, skills } = req.body;
 
-  if (!firstName || !lastName || !email || !phone || !education || !experience || !skills) {
+  if (!education || !experience || !skills) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience} years of experience, a ${education}, and skills in ${skills}.`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience}, a ${education}, and skills in ${skills}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -144,19 +144,26 @@ app.post('/generate_resume', async (req, res) => {
       .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
       .filter(line => line.trim() !== '.');
 
-    const resumeData = { firstName, lastName, email, phone, education, experience: experiencePoints, skills, linkedin };
-
-    const query = 'INSERT INTO resumes (username, resume_data) VALUES (?, ?) ON DUPLICATE KEY UPDATE resume_data = ?';
-    const values = [req.session.user.username, JSON.stringify(resumeData), JSON.stringify(resumeData)];
-
-    connection.query(query, values, (error, results) => {
+    // Save the resume to the database
+    const user = req.session.user;
+    const saveResumeQuery = 'INSERT INTO resumes (username, education, experience, skills) VALUES (?, ?, ?, ?)';
+    const resumeValues = [user.username, education, experiencePoints.join('\n'), skills];
+    connection.query(saveResumeQuery, resumeValues, (error) => {
       if (error) {
         console.error('Error saving resume:', error);
         return res.status(500).send('Error saving resume');
       }
-      res.render('generated_resume', resumeData);
+      res.render('generated_resume', {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        education,
+        skills,
+        experience: experiencePoints,
+        linkedin: req.body.linkedin
+      });
     });
-
   } catch (error) {
     console.error('Error generating description:', error);
     res.status(500).send('Error generating description');
@@ -165,13 +172,13 @@ app.post('/generate_resume', async (req, res) => {
 
 app.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
-
+  
   connection.query(query, (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-
+    
     const count = results[0].count;
     res.json({ userCount: count });
   });
@@ -186,27 +193,70 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// Get user information endpoints
-app.get('/user/:username/:info', (req, res) => {
-  const { username, info } = req.params;
-  const validInfo = ['education', 'skills', 'experience', 'email', 'phone', 'linkedin'];
-  if (!validInfo.includes(info)) {
-    return res.status(400).send('Invalid information requested');
-  }
-
-  const query = 'SELECT resume_data FROM resumes WHERE username = ?';
-  connection.query(query, [username], (error, results) => {
+// Add new routes to get user details
+app.get('/user/:username/education', (req, res) => {
+  const query = 'SELECT education FROM resumes WHERE username = ?';
+  connection.query(query, [req.params.username], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
+    res.json(results);
+  });
+});
 
-    if (results.length === 0) {
-      return res.status(404).send('User not found');
+app.get('/user/:username/skills', (req, res) => {
+  const query = 'SELECT skills FROM resumes WHERE username = ?';
+  connection.query(query, [req.params.username], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
     }
+    res.json(results);
+  });
+});
 
-    const resumeData = JSON.parse(results[0].resume_data);
-    res.json({ [info]: resumeData[info] });
+app.get('/user/:username/experience', (req, res) => {
+  const query = 'SELECT experience FROM resumes WHERE username = ?';
+  connection.query(query, [req.params.username], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    res.json(results);
+  });
+});
+
+app.get('/user/:username/email', (req, res) => {
+  const query = 'SELECT email FROM users WHERE username = ?';
+  connection.query(query, [req.params.username], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    res.json(results);
+  });
+});
+
+app.get('/user/:username/phone', (req, res) => {
+  const query = 'SELECT phone FROM users WHERE username = ?';
+  connection.query(query, [req.params.username], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    res.json(results);
+  });
+});
+
+app.get('/user/:username/linkedin', (req, res) => {
+  const query = 'SELECT linkedin FROM resumes WHERE username = ?';
+  connection.query(query, [req.params.username], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    res.json(results);
   });
 });
 
