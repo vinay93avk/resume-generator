@@ -3,6 +3,7 @@ const axios = require('axios');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
+const session = require('express-session');
 require('dotenv').config();
 
 const app = express();
@@ -37,13 +38,49 @@ connection.connect(error => {
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'your_secret_key',
+  resave: false,
+  saveUninitialized: true,
+}));
 
 app.get('/', (req, res) => {
-  res.render('index');
+  if (req.session.loggedIn) {
+    res.redirect('/resume');
+  } else {
+    res.render('index');
+  }
 });
 
 app.get('/login', (req, res) => {
   res.render('login');
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  const query = 'SELECT * FROM users WHERE email = ?';
+  connection.query(query, [email], async (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+
+    if (results.length === 0) {
+      return res.status(401).send('Invalid email or password');
+    }
+
+    const user = results[0];
+    const passwordMatch = await bcrypt.compare(password, user.hashed_password);
+
+    if (!passwordMatch) {
+      return res.status(401).send('Invalid email or password');
+    }
+
+    req.session.loggedIn = true;
+    req.session.user = user;
+    res.redirect('/resume');
+  });
 });
 
 app.get('/signup', (req, res) => {
@@ -71,29 +108,11 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  
-  const query = 'SELECT * FROM users WHERE email = ?';
-  connection.query(query, [email], async (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-
-    if (results.length === 0) {
-      return res.status(401).send('Invalid email or password');
-    }
-
-    const user = results[0];
-    const passwordMatch = await bcrypt.compare(password, user.hashed_password);
-
-    if (!passwordMatch) {
-      return res.status(401).send('Invalid email or password');
-    }
-
-    res.send('Login successful');
-  });
+app.get('/resume', (req, res) => {
+  if (!req.session.loggedIn) {
+    return res.redirect('/login');
+  }
+  res.render('resume', { user: req.session.user });
 });
 
 app.post('/generate_resume', async (req, res) => {

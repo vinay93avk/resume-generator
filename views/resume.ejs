@@ -2,19 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Generated Resume</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Generator</title>
 </head>
 <body>
-    <h1>Resume for <%= firstName %> <%= lastName %></h1>
-    <p>Email: <%= email %></p>
-    <p>Phone: <%= phone %></p>
-    <h2>Education</h2>
-    <p><%= education %></p>
-    <h2>Experience</h2>
-    <ul>
-        <% experience.forEach(function(point) { %>
-            <li><%= point %></li>
-        <% }); %>
-    </ul>
+    <h1>Resume Input Form</h1>
+    <form action="/generate_resume" method="post">
+        <input type="text" name="firstName" placeholder="First Name" value="<%= user.firstName %>" required><br>
+        <input type="text" name="lastName" placeholder="Last Name" value="<%= user.lastName %>" required><br>
+        <input type="email" name="email" placeholder="Email" value="<%= user.email %>" required><br>
+        <input type="text" name="phone" placeholder="Phone" required><br>
+        <input type="text" name="education" placeholder="Education" required><br>
+        <textarea name="experience" placeholder="Experience" required></textarea><br>
+        <button type="submit">Generate Resume</button>
+    </form>
 </body>
 </html>
