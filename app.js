@@ -118,7 +118,7 @@ app.post('/generate_resume', async (req, res) => {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the following experience: ${experience}`;
+  const prompt = `Generate concise bullet points for the following education and experience: Education - ${education}. Experience - ${experience}`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
