@@ -158,6 +158,16 @@ app.post('/generate_resume', async (req, res) => {
   }
 });
 
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Error logging out:', err);
+      return res.status(500).send('Error logging out');
+    }
+    res.redirect('/');
+  });
+});
+
 app.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
   
