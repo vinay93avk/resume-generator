@@ -38,22 +38,44 @@ connection.connect(error => {
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(session({
-  secret: 'your_secret_key',
+  secret: 'your-secret-key',
   resave: false,
   saveUninitialized: true,
 }));
 
 app.get('/', (req, res) => {
-  if (req.session.loggedIn) {
-    res.redirect('/resume');
-  } else {
-    res.render('index');
-  }
+  res.render('index');
 });
 
 app.get('/login', (req, res) => {
   res.render('login');
+});
+
+app.get('/signup', (req, res) => {
+  res.render('signup');
+});
+
+app.post('/signup', async (req, res) => {
+  const { firstName, lastName, username, email, password, phone } = req.body;
+  
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
+    const values = [firstName, lastName, username, email, hashedPassword, phone];
+    
+    connection.query(query, values, (error, results) => {
+      if (error) {
+        console.error('Error inserting user:', error);
+        return res.status(500).send('Error inserting user');
+      }
+      res.redirect('/login');
+    });
+  } catch (error) {
+    console.error('Error signing up:', error);
+    res.status(500).send('Error signing up');
+  }
 });
 
 app.post('/login', async (req, res) => {
@@ -77,40 +99,14 @@ app.post('/login', async (req, res) => {
       return res.status(401).send('Invalid email or password');
     }
 
-    req.session.loggedIn = true;
-    req.session.user = user;
+    req.session.user = user; // Save the user information in the session
     res.redirect('/resume');
   });
 });
 
-app.get('/signup', (req, res) => {
-  res.render('signup');
-});
-
-app.post('/signup', async (req, res) => {
-  const { firstName, lastName, username, email, password, phone } = req.body;
-  
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
-    const values = [firstName, lastName, username, email, hashedPassword, phone];
-    
-    connection.query(query, values, (error, results) => {
-      if (error) {
-        console.error('Error inserting user:', error);
-        return res.status(500).send('Error inserting user');
-      }
-      res.send('User signed up successfully');
-    });
-  } catch (error) {
-    console.error('Error signing up:', error);
-    res.status(500).send('Error signing up');
-  }
-});
-
 app.get('/resume', (req, res) => {
-  if (!req.session.loggedIn) {
-    return res.redirect('/login');
+  if (!req.session.user) {
+    return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
   res.render('resume', { user: req.session.user });
 });
@@ -144,7 +140,7 @@ app.post('/generate_resume', async (req, res) => {
       .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
       .filter(line => line.trim() !== '.');
 
-    res.render('resume', {
+    res.render('generated_resume', {
       firstName,
       lastName,
       email,
@@ -158,16 +154,6 @@ app.post('/generate_resume', async (req, res) => {
   }
 });
 
-app.get('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Error logging out:', err);
-      return res.status(500).send('Error logging out');
-    }
-    res.redirect('/');
-  });
-});
-
 app.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
   
@@ -179,6 +165,15 @@ app.get('/user-count', (req, res) => {
     
     const count = results[0].count;
     res.json({ userCount: count });
+  });
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).send('Failed to logout');
+    }
+    res.redirect('/');
   });
 });
 
