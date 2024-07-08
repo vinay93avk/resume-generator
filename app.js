@@ -59,6 +59,10 @@ app.get('/signup', (req, res) => {
 
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
+
+  if (!email.endsWith('@eagles.oc.edu')) {
+    return res.status(400).send('Email must be an @eagles.oc.edu address');
+  }
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
