@@ -144,15 +144,24 @@ app.post('/generate_resume', async (req, res) => {
       .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
       .filter(line => line.trim() !== '.');
 
-    res.render('generated_resume', {
-      firstName,
-      lastName,
-      email,
-      phone,
-      education,
-      experience: experiencePoints,
-      skills,
-      linkedUrl
+    const query = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const values = [req.session.user.id, firstName, lastName, email, phone, education, experiencePoints.join(' '), skills, linkedUrl];
+    
+    connection.query(query, values, (error, results) => {
+      if (error) {
+        console.error('Error saving resume:', error);
+        return res.status(500).send('Error saving resume');
+      }
+      res.render('generated_resume', {
+        firstName,
+        lastName,
+        email,
+        phone,
+        education,
+        experience: experiencePoints,
+        skills,
+        linkedUrl
+      });
     });
   } catch (error) {
     console.error('Error generating description:', error);
@@ -180,6 +189,24 @@ app.get('/logout', (req, res) => {
       return res.status(500).send('Failed to logout');
     }
     res.redirect('/');
+  });
+});
+
+app.get('/resume/:username', (req, res) => {
+  const username = req.params.username;
+
+  const query = 'SELECT * FROM resumes JOIN users ON resumes.user_id = users.id WHERE users.username = ?';
+  connection.query(query, [username], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('Resume not found');
+    }
+
+    res.json(results[0]);
   });
 });
 
