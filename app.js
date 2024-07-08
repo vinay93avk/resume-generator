@@ -112,7 +112,7 @@ app.get('/resume', (req, res) => {
 });
 
 app.post('/generate_resume', async (req, res) => {
-  const { firstName, lastName, email, phone, education, experience, skills } = req.body;
+  const { firstName, lastName, email, phone, education, experience, skills, linkedUrl } = req.body;
 
   if (!firstName || !lastName || !email || !phone || !education || !experience || !skills) {
     return res.status(400).send('All fields are required');
@@ -147,7 +147,8 @@ app.post('/generate_resume', async (req, res) => {
       phone,
       education,
       experience: experiencePoints,
-      skills
+      skills,
+      linkedUrl
     });
   } catch (error) {
     console.error('Error generating description:', error);
