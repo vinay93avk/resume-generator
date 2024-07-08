@@ -284,6 +284,29 @@ app.get('/user/:email/linkedin', (req, res) => {
   });
 });
 
+app.get('/resume/:email', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT * FROM resumes WHERE email = ?';
+
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('No resume found for the given email');
+    }
+
+    res.json(results[0]);
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
+
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
