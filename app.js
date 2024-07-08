@@ -61,14 +61,14 @@ app.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
 
   if (!email.endsWith('@eagles.oc.edu')) {
-    return res.status(400).send('Email must be an @eagles.oc.edu address');
+    return res.status(400).send('Email must end with @eagles.oc.edu');
   }
-  
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
     const values = [firstName, lastName, username, email, hashedPassword, phone];
-    
+
     connection.query(query, values, (error, results) => {
       if (error) {
         console.error('Error inserting user:', error);
@@ -84,7 +84,7 @@ app.post('/signup', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  
+
   const query = 'SELECT * FROM users WHERE email = ?';
   connection.query(query, [email], async (error, results) => {
     if (error) {
@@ -116,7 +116,7 @@ app.get('/resume', (req, res) => {
 });
 
 app.post('/generate_resume', async (req, res) => {
-  const { firstName, lastName, email, phone, education, experience, skills, linkedUrl } = req.body;
+  const { firstName, lastName, email, phone, education, experience, skills, linkedin } = req.body;
 
   if (!firstName || !lastName || !email || !phone || !education || !experience || !skills) {
     return res.status(400).send('All fields are required');
@@ -144,25 +144,19 @@ app.post('/generate_resume', async (req, res) => {
       .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
       .filter(line => line.trim() !== '.');
 
-    const query = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const values = [req.session.user.id, firstName, lastName, email, phone, education, experiencePoints.join(' '), skills, linkedUrl];
-    
+    const resumeData = { firstName, lastName, email, phone, education, experience: experiencePoints, skills, linkedin };
+
+    const query = 'INSERT INTO resumes (username, resume_data) VALUES (?, ?) ON DUPLICATE KEY UPDATE resume_data = ?';
+    const values = [req.session.user.username, JSON.stringify(resumeData), JSON.stringify(resumeData)];
+
     connection.query(query, values, (error, results) => {
       if (error) {
         console.error('Error saving resume:', error);
         return res.status(500).send('Error saving resume');
       }
-      res.render('generated_resume', {
-        firstName,
-        lastName,
-        email,
-        phone,
-        education,
-        experience: experiencePoints,
-        skills,
-        linkedUrl
-      });
+      res.render('generated_resume', resumeData);
     });
+
   } catch (error) {
     console.error('Error generating description:', error);
     res.status(500).send('Error generating description');
@@ -171,13 +165,13 @@ app.post('/generate_resume', async (req, res) => {
 
 app.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
-  
+
   connection.query(query, (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     const count = results[0].count;
     res.json({ userCount: count });
   });
@@ -192,10 +186,15 @@ app.get('/logout', (req, res) => {
   });
 });
 
-app.get('/resume/:username', (req, res) => {
-  const username = req.params.username;
+// Get user information endpoints
+app.get('/user/:username/:info', (req, res) => {
+  const { username, info } = req.params;
+  const validInfo = ['education', 'skills', 'experience', 'email', 'phone', 'linkedin'];
+  if (!validInfo.includes(info)) {
+    return res.status(400).send('Invalid information requested');
+  }
 
-  const query = 'SELECT * FROM resumes JOIN users ON resumes.user_id = users.id WHERE users.username = ?';
+  const query = 'SELECT resume_data FROM resumes WHERE username = ?';
   connection.query(query, [username], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
@@ -203,10 +202,11 @@ app.get('/resume/:username', (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.status(404).send('Resume not found');
+      return res.status(404).send('User not found');
     }
 
-    res.json(results[0]);
+    const resumeData = JSON.parse(results[0].resume_data);
+    res.json({ [info]: resumeData[info] });
   });
 });
 

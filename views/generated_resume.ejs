@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generated Resume</title>
 </head>
 <body>
@@ -11,20 +10,17 @@
     <p>Phone: <%= phone %></p>
     <h2>Education</h2>
     <p><%= education %></p>
+    <h2>Skills</h2>
+    <p><%= skills %></p>
     <h2>Experience</h2>
     <ul>
         <% experience.forEach(function(point) { %>
             <li><%= point %></li>
         <% }); %>
     </ul>
-    <h2>Skills</h2>
-    <p><%= skills %></p>
-    <% if (linkedUrl) { %>
-        <h2>LinkedIn</h2>
-        <p><a href="<%= linkedUrl %>"><%= linkedUrl %></a></p>
+    <% if (linkedin) { %>
+    <h2>LinkedIn</h2>
+    <p><a href="<%= linkedin %>"><%= linkedin %></a></p>
     <% } %>
-    <nav>
-        <a href="/logout">Logout</a>
-    </nav>
 </body>
 </html>
