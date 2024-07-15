@@ -122,8 +122,8 @@ router.post('/generate_resume', async (req, res) => {
         return res.status(500).send('Error saving education');
       }
 
-      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-      const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, experiencePoints.join(' '), email];
+      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
+      const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, email];
       connection.query(insertExperienceQuery, experienceValues, (error, results) => {
         if (error) {
           console.error('Error saving experience:', error);
@@ -206,7 +206,7 @@ router.get('/user/:email/education', (req, res) => {
 
 router.get('/user/:email/experience', (req, res) => {
   const email = req.params.email;
-  const query = 'SELECT company_name, role, start_date, end_date, description FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+  const query = 'SELECT company_name, role, start_date, end_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
 
   connection.query(query, [email], (error, results) => {
     if (error) {
@@ -368,7 +368,7 @@ router.get('/user/:email/phone', (req, res) => {
   
   router.get('/user/:email/experience', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT experience FROM resumes WHERE email = ?';
+    const query = 'SELECT company_name, role, start_date, end_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
