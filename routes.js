@@ -26,16 +26,16 @@ router.get('/signup', (req, res) => {
 
 router.post('/signup', async (req, res) => {
   const { firstName, lastName, username, email, password, phone } = req.body;
-  
+
   if (!email.endsWith('@eagles.oc.edu')) {
     return res.status(400).send('Please enter a valid OC email');
   }
-  
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = 'INSERT INTO users (firstName, lastName, username, email, hashed_password, phone) VALUES (?, ?, ?, ?, ?, ?)';
     const values = [firstName, lastName, username, email, hashedPassword, phone];
-    
+
     connection.query(query, values, (error, results) => {
       if (error) {
         console.error('Error inserting user:', error);
@@ -51,7 +51,7 @@ router.post('/signup', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  
+
   const query = 'SELECT * FROM users WHERE email = ?';
   connection.query(query, [email], async (error, results) => {
     if (error) {
@@ -90,7 +90,7 @@ router.post('/generate_resume', async (req, res) => {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the ${jobDescription}`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -143,13 +143,13 @@ router.post('/generate_resume', async (req, res) => {
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
-  
+
   connection.query(query, (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     const count = results[0].count;
     res.json({ userCount: count });
   });
@@ -167,35 +167,35 @@ router.get('/logout', (req, res) => {
 router.get('/user/:email/education', (req, res) => {
   const email = req.params.email;
   const query = 'SELECT degree, institution, startDate, endDate FROM resumes WHERE email = ?';
-  
+
   connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     if (results.length === 0) {
       return res.status(404).send('No education found for the given email');
     }
-    
-    res.json({ degree: results[0].degree, institution: results[0].institution, startDate: results[0].startDate, endDate: results[0].endDate });
+
+    res.json(results[0]);
   });
 });
 
 router.get('/user/:email/experience', (req, res) => {
   const email = req.params.email;
   const query = 'SELECT experience FROM resumes WHERE email = ?';
-  
+
   connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     if (results.length === 0) {
       return res.status(404).send('No experience found for the given email');
     }
-    
+
     res.json({ experience: results[0].experience });
   });
 });
@@ -203,17 +203,17 @@ router.get('/user/:email/experience', (req, res) => {
 router.get('/user/:email/skills', (req, res) => {
   const email = req.params.email;
   const query = 'SELECT skills FROM resumes WHERE email = ?';
-  
+
   connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     if (results.length === 0) {
       return res.status(404).send('No skills found for the given email');
     }
-    
+
     res.json({ skills: results[0].skills });
   });
 });
@@ -221,17 +221,17 @@ router.get('/user/:email/skills', (req, res) => {
 router.get('/user/:email/phone', (req, res) => {
   const email = req.params.email;
   const query = 'SELECT phone FROM resumes WHERE email = ?';
-  
+
   connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     if (results.length === 0) {
       return res.status(404).send('No phone found for the given email');
     }
-    
+
     res.json({ phone: results[0].phone });
   });
 });
@@ -239,17 +239,17 @@ router.get('/user/:email/phone', (req, res) => {
 router.get('/user/:email/linkedin', (req, res) => {
   const email = req.params.email;
   const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
-  
+
   connection.query(query, [email], (error, results) => {
     if (error) {
       console.error('Error querying the database:', error);
       return res.status(500).send('Error querying the database');
     }
-    
+
     if (results.length === 0) {
       return res.status(404).send('No LinkedIn URL found for the given email');
     }
-    
+
     res.json({ linkedUrl: results[0].linkedUrl });
   });
 });
