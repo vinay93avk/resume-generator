@@ -83,14 +83,14 @@ router.get('/resume', (req, res) => {
 });
 
 router.post('/generate_resume', async (req, res) => {
-  const { education, experience, skills, linkedUrl } = req.body;
+  const { education, experience, skills, linkedUrl, job_description } = req.body;
   const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !education || !experience) {
+  if (!firstName || !lastName || !email || !phone || !education || !experience || !job_description) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${education}, and skills in ${skills}.`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${education}, and skills in ${skills}. Ensure the points align with the ${job_description}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -218,17 +218,17 @@ router.get('/user/:email/skills', (req, res) => {
 router.get('/user/:email/phone', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT phone FROM resumes WHERE email = ?';
-    
+  
     connection.query(query, [email], (error, results) => {
       if (error) {
         console.error('Error querying the database:', error);
         return res.status(500).send('Error querying the database');
       }
-      
+  
       if (results.length === 0) {
         return res.status(404).send('No phone found for the given email');
       }
-      
+  
       res.json({ phone: results[0].phone });
     });
   });
@@ -236,17 +236,17 @@ router.get('/user/:email/phone', (req, res) => {
   router.get('/user/:email/linkedin', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
-    
+  
     connection.query(query, [email], (error, results) => {
       if (error) {
         console.error('Error querying the database:', error);
         return res.status(500).send('Error querying the database');
       }
-      
+  
       if (results.length === 0) {
         return res.status(404).send('No LinkedIn URL found for the given email');
       }
-      
+  
       res.json({ linkedUrl: results[0].linkedUrl });
     });
   });
