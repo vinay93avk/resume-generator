@@ -50,3 +50,4 @@ jobs:
             npm install
             pm2 reload ecosystem.config.js --env production
             pm2 restart all
+            pm2 status
