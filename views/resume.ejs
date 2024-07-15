@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Input Form</title>
+    <title>Resume Generator</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -30,10 +30,14 @@
             <input type="text" name="institution" placeholder="Institution" required><br>
             <input type="date" name="startDate" placeholder="Start Date" required><br>
             <input type="date" name="endDate" placeholder="End Date" required><br>
-            <textarea name="experience" placeholder="Experience" required></textarea><br>
+            <input type="text" name="company_name" placeholder="Company Name" required><br>
+            <input type="text" name="role" placeholder="Role" required><br>
+            <input type="date" name="experience_start_date" placeholder="Experience Start Date" required><br>
+            <input type="date" name="experience_end_date" placeholder="Experience End Date" required><br>
+            <textarea name="description" placeholder="Experience Description" required></textarea><br>
             <input type="text" name="skills" placeholder="Skills" required><br>
             <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
-            <input type="text" name="jobDescription" placeholder="Job Description" required><br>
+            <textarea name="jobDescription" placeholder="Job Description" required></textarea><br>
             <input type="submit" value="Generate Resume">
         </form>
     </div>

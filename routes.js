@@ -83,14 +83,14 @@ router.get('/resume', (req, res) => {
 });
 
 router.post('/generate_resume', async (req, res) => {
-  const { degree, institution, startDate, endDate, experience, skills, linkedUrl, jobDescription } = req.body;
+  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription } = req.body;
   const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !experience || !skills || !jobDescription) {
+  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+  const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -122,25 +122,38 @@ router.post('/generate_resume', async (req, res) => {
         return res.status(500).send('Error saving education');
       }
 
-      const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-      const resumeValues = [user.id, firstName, lastName, email, phone, experiencePoints.join(' '), skills, linkedUrl];
-      connection.query(insertResumeQuery, resumeValues, (error, results) => {
+      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
+      const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, experiencePoints.join(' '), email];
+      connection.query(insertExperienceQuery, experienceValues, (error, results) => {
         if (error) {
-          console.error('Error saving resume:', error);
-          return res.status(500).send('Error saving resume');
+          console.error('Error saving experience:', error);
+          return res.status(500).send('Error saving experience');
         }
-        res.render('generated_resume', {
-          firstName,
-          lastName,
-          email,
-          phone,
-          degree,
-          institution,
-          startDate,
-          endDate,
-          experience: experiencePoints,
-          skills,
-          linkedUrl
+        
+        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        const resumeValues = [user.id, firstName, lastName, email, phone, skills, linkedUrl];
+        connection.query(insertResumeQuery, resumeValues, (error, results) => {
+          if (error) {
+            console.error('Error saving resume:', error);
+            return res.status(500).send('Error saving resume');
+          }
+          res.render('generated_resume', {
+            firstName,
+            lastName,
+            email,
+            phone,
+            degree,
+            institution,
+            startDate,
+            endDate,
+            company_name,
+            role,
+            experience_start_date,
+            experience_end_date,
+            description: experiencePoints,
+            skills,
+            linkedUrl
+          });
         });
       });
     });
@@ -193,7 +206,7 @@ router.get('/user/:email/education', (req, res) => {
 
 router.get('/user/:email/experience', (req, res) => {
   const email = req.params.email;
-  const query = 'SELECT experience FROM resumes WHERE email = ?';
+  const query = 'SELECT company_name, role, start_date, end_date, description FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
 
   connection.query(query, [email], (error, results) => {
     if (error) {
@@ -205,7 +218,7 @@ router.get('/user/:email/experience', (req, res) => {
       return res.status(404).send('No experience found for the given email');
     }
 
-    res.json({ experience: results[0].experience });
+    res.json(results[0]);
   });
 });
 
@@ -228,24 +241,24 @@ router.get('/user/:email/skills', (req, res) => {
 });
 
 router.get('/user/:email/phone', (req, res) => {
-  const email = req.params.email;
-  const query = 'SELECT phone FROM resumes WHERE email = ?';
-
-  connection.query(query, [email], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send('No phone found for the given email');
-    }
-
-    res.json({ phone: results[0].phone });
+    const email = req.params.email;
+    const query = 'SELECT phone FROM resumes WHERE email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No phone found for the given email');
+      }
+  
+      res.json({ phone: results[0].phone });
+    });
   });
-});
-
-router.get('/user/:email/linkedin', (req, res) => {
+  
+  router.get('/user/:email/linkedin', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
   
@@ -352,7 +365,7 @@ router.get('/user/:email/linkedin', (req, res) => {
       res.json({ end_date: results[0].end_date });
     });
   });
-    
+  
   router.get('/user/:email/experience', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT experience FROM resumes WHERE email = ?';
