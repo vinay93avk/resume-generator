@@ -83,85 +83,85 @@ router.get('/resume', (req, res) => {
 });
 
 router.post('/generate_resume', async (req, res) => {
-  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription } = req.body;
-  const { firstName, lastName, email, phone } = req.session.user;
+    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription } = req.body;
+    const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
-    return res.status(400).send('All fields are required');
-  }
-
-  const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
-
-  try {
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt }
-      ]
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const experienceDescription = response.data.choices[0].message.content.trim();
-    const experiencePoints = experienceDescription
-      .split('\n')
-      .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
-      .filter(line => line.trim() !== '.');
-
-    const user = req.session.user;
-
-    const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-    const educationValues = [user.id, degree, institution, startDate, endDate, email];
-    connection.query(insertEducationQuery, educationValues, (error, results) => {
-      if (error) {
-        console.error('Error saving education:', error);
-        return res.status(500).send('Error saving education');
-      }
-
-      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-      const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, description, experiencePoints.join(' '), email];
-      connection.query(insertExperienceQuery, experienceValues, (error, results) => {
-        if (error) {
-          console.error('Error saving experience:', error);
-          return res.status(500).send('Error saving experience');
+    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
+      return res.status(400).send('All fields are required');
+    }
+  
+    const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+  
+    try {
+      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: prompt }
+        ]
+      }, {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
         }
-        
-        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
-        connection.query(insertResumeQuery, resumeValues, (error, results) => {
+      });
+  
+      const experienceDescription = response.data.choices[0].message.content.trim();
+      const experiencePoints = experienceDescription
+        .split('\n')
+        .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
+        .filter(line => line.trim() !== '.');
+  
+      const user = req.session.user;
+  
+      const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
+      const educationValues = [user.id, degree, institution, startDate, endDate, email];
+      connection.query(insertEducationQuery, educationValues, (error, results) => {
+        if (error) {
+          console.error('Error saving education:', error);
+          return res.status(500).send('Error saving education');
+        }
+  
+        const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, experiencePoints.join(' '), email];
+        connection.query(insertExperienceQuery, experienceValues, (error, results) => {
           if (error) {
-            console.error('Error saving resume:', error);
-            return res.status(500).send('Error saving resume');
+            console.error('Error saving experience:', error);
+            return res.status(500).send('Error saving experience');
           }
-          res.render('generated_resume', {
-            firstName,
-            lastName,
-            email,
-            phone,
-            degree,
-            institution,
-            startDate,
-            endDate,
-            company_name,
-            role,
-            experience_start_date,
-            experience_end_date,
-            description: experiencePoints,
-            skills,
-            linkedUrl
+          
+          const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+          const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
+          connection.query(insertResumeQuery, resumeValues, (error, results) => {
+            if (error) {
+              console.error('Error saving resume:', error);
+              return res.status(500).send('Error saving resume');
+            }
+            res.render('generated_resume', {
+              firstName,
+              lastName,
+              email,
+              phone,
+              degree,
+              institution,
+              startDate,
+              endDate,
+              company_name,
+              role,
+              experience_start_date,
+              experience_end_date,
+              description: experiencePoints,
+              skills,
+              linkedUrl
+            });
           });
         });
       });
-    });
-  } catch (error) {
-    console.error('Error generating description:', error);
-    res.status(500).send('Error generating description');
-  }
-});
+    } catch (error) {
+      console.error('Error generating description:', error);
+      res.status(500).send('Error generating description');
+    }
+  });
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
