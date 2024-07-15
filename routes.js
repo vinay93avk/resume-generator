@@ -121,18 +121,27 @@ router.post('/generate_resume', async (req, res) => {
         console.error('Error saving education:', error);
         return res.status(500).send('Error saving education');
       }
-      res.render('generated_resume', {
-        firstName,
-        lastName,
-        email,
-        phone,
-        degree,
-        institution,
-        startDate,
-        endDate,
-        experience: experiencePoints,
-        skills,
-        linkedUrl
+
+      const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+      const resumeValues = [user.id, firstName, lastName, email, phone, experiencePoints.join(' '), skills, linkedUrl];
+      connection.query(insertResumeQuery, resumeValues, (error, results) => {
+        if (error) {
+          console.error('Error saving resume:', error);
+          return res.status(500).send('Error saving resume');
+        }
+        res.render('generated_resume', {
+          firstName,
+          lastName,
+          email,
+          phone,
+          degree,
+          institution,
+          startDate,
+          endDate,
+          experience: experiencePoints,
+          skills,
+          linkedUrl
+        });
       });
     });
   } catch (error) {
@@ -237,24 +246,24 @@ router.get('/user/:email/phone', (req, res) => {
 });
 
 router.get('/user/:email/linkedin', (req, res) => {
-  const email = req.params.email;
-  const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
-
-  connection.query(query, [email], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send('No LinkedIn URL found for the given email');
-    }
-
-    res.json({ linkedUrl: results[0].linkedUrl });
+    const email = req.params.email;
+    const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No LinkedIn URL found for the given email');
+      }
+  
+      res.json({ linkedUrl: results[0].linkedUrl });
+    });
   });
-});
-
-router.get('/resume/:email', (req, res) => {
+  
+  router.get('/resume/:email', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT * FROM resumes WHERE email = ?';
   
@@ -274,7 +283,7 @@ router.get('/resume/:email', (req, res) => {
   
   router.get('/user/:email/degree', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT degree FROM education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT degree FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -292,7 +301,7 @@ router.get('/resume/:email', (req, res) => {
   
   router.get('/user/:email/institution', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT institution FROM education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT institution FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -310,7 +319,7 @@ router.get('/resume/:email', (req, res) => {
   
   router.get('/user/:email/start_date', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT start_date FROM education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT start_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -328,7 +337,7 @@ router.get('/resume/:email', (req, res) => {
   
   router.get('/user/:email/end_date', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT end_date FROM education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT end_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -343,7 +352,7 @@ router.get('/resume/:email', (req, res) => {
       res.json({ end_date: results[0].end_date });
     });
   });
-  
+    
   router.get('/user/:email/experience', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT experience FROM resumes WHERE email = ?';
@@ -418,4 +427,3 @@ router.get('/resume/:email', (req, res) => {
   
   module.exports = router;
   
-     
