@@ -130,8 +130,8 @@ router.post('/generate_resume', async (req, res) => {
           return res.status(500).send('Error saving experience');
         }
         
-        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, skills, linkedUrl, experience) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-        const resumeValues = [user.id, firstName, lastName, email, phone, skills, linkedUrl, experience];
+        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        const resumeValues = [user.id, firstName, lastName, email, phone, skills, linkedUrl];
         connection.query(insertResumeQuery, resumeValues, (error, results) => {
           if (error) {
             console.error('Error saving resume:', error);
@@ -439,4 +439,4 @@ router.get('/user/:email/phone', (req, res) => {
   });
   
   module.exports = router;
-
+  
