@@ -101,7 +101,7 @@ router.post('/generate_resume', async (req, res) => {
       ]
     }, {
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -216,42 +216,42 @@ router.get('/user/:email/skills', (req, res) => {
 });
 
 router.get('/user/:email/phone', (req, res) => {
-    const email = req.params.email;
-    const query = 'SELECT phone FROM resumes WHERE email = ?';
+  const email = req.params.email;
+  const query = 'SELECT phone FROM resumes WHERE email = ?';
   
-    connection.query(query, [email], (error, results) => {
-      if (error) {
-        console.error('Error querying the database:', error);
-        return res.status(500).send('Error querying the database');
-      }
-  
-      if (results.length === 0) {
-        return res.status(404).send('No phone found for the given email');
-      }
-  
-      res.json({ phone: results[0].phone });
-    });
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).send('No phone found for the given email');
+    }
+    
+    res.json({ phone: results[0].phone });
   });
+});
+
+router.get('/user/:email/linkedin', (req, res) => {
+  const email = req.params.email;
+  const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
   
-  router.get('/user/:email/linkedin', (req, res) => {
-    const email = req.params.email;
-    const query = 'SELECT linkedUrl FROM resumes WHERE email = ?';
-  
-    connection.query(query, [email], (error, results) => {
-      if (error) {
-        console.error('Error querying the database:', error);
-        return res.status(500).send('Error querying the database');
-      }
-  
-      if (results.length === 0) {
-        return res.status(404).send('No LinkedIn URL found for the given email');
-      }
-  
-      res.json({ linkedUrl: results[0].linkedUrl });
-    });
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).send('No LinkedIn URL found for the given email');
+    }
+    
+    res.json({ linkedUrl: results[0].linkedUrl });
   });
-  
-  router.get('/resume/:email', (req, res) => {
+});
+
+router.get('/resume/:email', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT * FROM resumes WHERE email = ?';
   
@@ -271,3 +271,4 @@ router.get('/user/:email/phone', (req, res) => {
   
   module.exports = router;
   
+     
