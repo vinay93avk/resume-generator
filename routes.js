@@ -3,6 +3,9 @@ const router = express.Router();
 const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
 const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -83,14 +86,14 @@ router.get('/resume', (req, res) => {
 });
 
 router.post('/generate_resume', async (req, res) => {
-  const { education, experience, skills, linkedUrl, job_description } = req.body;
+  const { education, experience, skills, linkedUrl, jobDescription } = req.body;
   const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !education || !experience || !job_description) {
+  if (!firstName || !lastName || !email || !phone || !education || !experience || !skills || !jobDescription) {
     return res.status(400).send('All fields are required');
   }
 
-  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${education}, and skills in ${skills}. Ensure the points align with the ${job_description}.`;
+  const prompt = `Generate concise bullet points for the experience section based on ${experience} of experience, a ${education}, and skills in ${skills}. Ensure the points align with the job description: ${jobDescription}`;
 
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -101,7 +104,7 @@ router.post('/generate_resume', async (req, res) => {
       ]
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -252,23 +255,22 @@ router.get('/user/:email/linkedin', (req, res) => {
 });
 
 router.get('/resume/:email', (req, res) => {
-    const email = req.params.email;
-    const query = 'SELECT * FROM resumes WHERE email = ?';
-  
-    connection.query(query, [email], (error, results) => {
-      if (error) {
-        console.error('Error querying the database:', error);
-        return res.status(500).send('Error querying the database');
-      }
-  
-      if (results.length === 0) {
+  const email = req.params.email;
+  const query = 'SELECT * FROM resumes WHERE email = ?';
+
+  connection.query(query, [email], (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+
+    if (results.length === 0) {
         return res.status(404).send('No resume found for the given email');
       }
-  
+      
       res.json(results[0]);
-    });
-  });
-  
-  module.exports = router;
-  
-     
+      });
+      });
+      
+      module.exports = router;
+      

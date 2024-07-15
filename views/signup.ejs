@@ -4,18 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Signup</title>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <h1>Signup</h1>
-    <form action="/signup" method="post">
-        <input type="text" name="firstName" placeholder="First Name" required><br>
-        <input type="text" name="lastName" placeholder="Last Name" required><br>
-        <input type="text" name="username" placeholder="Username" required><br>
-        <input type="email" name="email" placeholder="Email" required><br>
-        <input type="password" name="password" placeholder="Password" required><br>
-        <input type="text" name="phone" placeholder="Phone"><br> <!-- Optional -->
-        <button type="submit">Sign Up</button>
-    </form>
-    <p>Already have an account? <a href="/login">Login</a></p>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1>Resume Generator</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/login">Login</a></li>
+                    <li><a href="/signup">Signup</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <h1>Signup</h1>
+        <form action="/signup" method="post">
+            <input type="text" name="firstName" placeholder="First Name" required><br>
+            <input type="text" name="lastName" placeholder="Last Name" required><br>
+            <input type="text" name="username" placeholder="Username" required><br>
+            <input type="email" name="email" placeholder="Email" required><br>
+            <input type="password" name="password" placeholder="Password" required><br>
+            <input type="text" name="phone" placeholder="Phone"><br> <!-- Optional -->
+            <input type="submit" value="Sign Up">
+        </form>
+        <p>Already have an account? <a href="/login">Login</a></p>
+    </div>
 </body>
 </html>

@@ -2,23 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generated Resume</title>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <h1>Resume for <%= firstName %> <%= lastName %></h1>
-    <p>Email: <%= email %></p>
-    <p>Phone: <%= phone %></p>
-    <h2>Education</h2>
-    <p><%= education %></p>
-    <h2>Experience</h2>
-    <ul>
-        <% experience.forEach(function(point) { %>
-            <li><%= point %></li>
-        <% }); %>
-    </ul>
-    <h2>Skills</h2>
-    <p><%= skills %></p>
-    <h2>LinkedIn URL</h2>
-    <p><%= linkedUrl %></p>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1>Resume Generator</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/logout">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <h1>Resume for <%= firstName %> <%= lastName %></h1>
+        <p>Email: <%= email %></p>
+        <p>Phone: <%= phone %></p>
+        <h2>Education</h2>
+        <p><%= education %></p>
+        <h2>Experience</h2>
+        <ul>
+            <% experience.forEach(function(point) { %>
+                <li><%= point %></li>
+            <% }); %>
+        </ul>
+        <h2>Skills</h2>
+        <p><%= skills %></p>
+        <% if (linkedUrl) { %>
+            <h2>LinkedIn</h2>
+            <p><a href="<%= linkedUrl %>"><%= linkedUrl %></a></p>
+        <% } %>
+    </div>
 </body>
 </html>
