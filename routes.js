@@ -114,23 +114,21 @@ router.post('/generate_resume', async (req, res) => {
 
     const user = req.session.user;
 
-    const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
-    connection.query(insertResumeQuery, resumeValues, (error, results) => {
+    const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date) VALUES (?, ?, ?, ?, ?)';
+    const educationValues = [user.id, degree, institution, startDate, endDate];
+    connection.query(insertEducationQuery, educationValues, (error, results) => {
       if (error) {
-        console.error('Error saving resume:', error);
-        return res.status(500).send('Error saving resume');
+        console.error('Error saving education:', error);
+        return res.status(500).send('Error saving education');
       }
 
-      // Save education details in Education table
-      const insertEducationQuery = 'INSERT INTO education (user_id, degree, institution, startDate, endDate) VALUES (?, ?, ?, ?, ?)';
-      const educationValues = [user.id, degree, institution, startDate, endDate];
-      connection.query(insertEducationQuery, educationValues, (error, results) => {
+      const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+      const resumeValues = [user.id, firstName, lastName, email, phone, experiencePoints.join(' '), skills, linkedUrl];
+      connection.query(insertResumeQuery, resumeValues, (error, results) => {
         if (error) {
-          console.error('Error saving education:', error);
-          return res.status(500).send('Error saving education');
+          console.error('Error saving resume:', error);
+          return res.status(500).send('Error saving resume');
         }
-
         res.render('generated_resume', {
           firstName,
           lastName,
@@ -177,7 +175,7 @@ router.get('/logout', (req, res) => {
 
 router.get('/user/:email/education', (req, res) => {
   const email = req.params.email;
-  const query = 'SELECT * FROM education WHERE email = ?';
+  const query = 'SELECT degree, institution, start_date, end_date FROM Education WHERE user_id = (SELECT id FROM users WHERE email = ?)';
 
   connection.query(query, [email], (error, results) => {
     if (error) {
@@ -255,33 +253,33 @@ router.get('/user/:email/linkedin', (req, res) => {
       if (error) {
         console.error('Error querying the database:', error);
         return res.status(500).send('Error querying the database');
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send('No LinkedIn URL found for the given email');
-    }
-
-    res.json({ linkedUrl: results[0].linkedUrl });
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No LinkedIn URL found for the given email');
+      }
+  
+      res.json({ linkedUrl: results[0].linkedUrl });
+    });
   });
-});
-
-router.get('/resume/:email', (req, res) => {
-  const email = req.params.email;
-  const query = 'SELECT * FROM resumes WHERE email = ?';
-
-  connection.query(query, [email], (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send('No resume found for the given email');
-    }
-
-    res.json(results[0]);
+  
+  router.get('/resume/:email', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT * FROM resumes WHERE email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No resume found for the given email');
+      }
+  
+      res.json(results[0]);
+    });
   });
-});
-
-module.exports = router;
-
+  
+  module.exports = router;
+  
