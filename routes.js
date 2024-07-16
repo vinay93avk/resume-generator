@@ -613,6 +613,67 @@ router.delete('/user/:email/experience/:id', (req, res) => {
     });
 });
 
+// POST /user/:email/experience
+router.post('/user/:email/experience', (req, res) => {
+    const email = req.params.email;
+    const { company_name, role, start_date, end_date, description } = req.body;
+
+    const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+    connection.query(getUserIdQuery, [email], (error, results) => {
+        if (error) {
+            console.error('Error querying the database:', error);
+            return res.status(500).send('Error querying the database');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const user_id = results[0].id;
+        const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
+        const values = [user_id, company_name, role, start_date, end_date, description];
+
+        connection.query(insertExperienceQuery, values, (error, results) => {
+            if (error) {
+                console.error('Error inserting experience:', error);
+                return res.status(500).send('Error inserting experience');
+            }
+            res.status(201).send('Experience added successfully');
+        });
+    });
+});
+
+// PUT /user/:email/experience/:id
+router.put('/user/:email/experience/:id', (req, res) => {
+    const email = req.params.email;
+    const experience_id = req.params.id;
+    const { company_name, role, start_date, end_date, description } = req.body;
+
+    const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+    connection.query(getUserIdQuery, [email], (error, results) => {
+        if (error) {
+            console.error('Error querying the database:', error);
+            return res.status(500).send('Error querying the database');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const user_id = results[0].id;
+        const updateExperienceQuery = 'UPDATE Experience SET company_name = ?, role = ?, start_date = ?, end_date = ?, description = ? WHERE user_id = ? AND id = ?';
+        const values = [company_name, role, start_date, end_date, description, user_id, experience_id];
+
+        connection.query(updateExperienceQuery, values, (error, results) => {
+            if (error) {
+                console.error('Error updating experience:', error);
+                return res.status(500).send('Error updating experience');
+            }
+            res.status(200).send('Experience updated successfully');
+        });
+    });
+});
+
 
   router.get('/user/:email/login_time', (req, res) => {
     const email = req.params.email;
