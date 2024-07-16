@@ -332,7 +332,7 @@ router.get('/user/:email/skills', (req, res) => {
   
   router.get('/user/:email/start_date', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT start_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT DATE_FORMAT(start_date, "%Y-%m-%d") AS start_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -350,7 +350,7 @@ router.get('/user/:email/skills', (req, res) => {
   
   router.get('/user/:email/end_date', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT end_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT DATE_FORMAT(end_date, "%Y-%m-%d") AS end_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -476,7 +476,7 @@ router.get('/user/:email/skills', (req, res) => {
   
   router.get('/user/:email/experience/start_date', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT start_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT DATE_FORMAT(start_date, "%Y-%m-%d") AS start_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -494,7 +494,7 @@ router.get('/user/:email/skills', (req, res) => {
   
   router.get('/user/:email/experience/end_date', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT end_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = 'SELECT DATE_FORMAT(end_date, "%Y-%m-%d") AS end_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
