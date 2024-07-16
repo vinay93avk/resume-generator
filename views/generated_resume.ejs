@@ -53,7 +53,7 @@
             <% certificates.forEach(function(cert) { %>
                 <li>
                     <strong><%= cert.certificate_name %></strong> from <%= cert.issuing_organization %><br>
-                    <em>Start Date:</em> <%= cert.start_date %>, <em>End Date:</em> <%= cert.end_date %>
+                    <em>Issue Date:</em> <%= cert.issue_date %>, <em>Expiration Date:</em> <%= cert.expiration_date %>
                 </li>
             <% }); %>
         </ul>
