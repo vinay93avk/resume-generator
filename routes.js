@@ -119,25 +119,35 @@ router.get('/resume', (req, res) => {
   res.render('resume', { user: req.session.user });
 });
 
-function parseCertificates(certificates) {
-    return certificates.map((cert, index) => ({
-      certificate_name: cert.certificate_name[index],
-      issuing_organization: cert.issuing_organization[index],
-      start_date: cert.certificate_start_date[index],
-      end_date: cert.certificate_end_date[index]
-    }));
-  }
-  
-  function parseSkills(skills) {
+// Add this code snippet where appropriate in the existing routes.js file
+
+// Function to handle splitting skills and proficiency levels
+function parseSkills(skills) {
     return skills.split(',').map(skill => {
       const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
       return { skill_name, proficiency_level };
     });
   }
   
+  // Function to handle splitting certificates
+  function parseCertificates(certificateNames, issuingOrganizations, certificateStartDates, certificateEndDates) {
+    const certificates = [];
+    for (let i = 0; i < certificateNames.length; i++) {
+      certificates.push({
+        certificate_name: certificateNames[i],
+        issuing_organization: issuingOrganizations[i],
+        start_date: certificateStartDates[i],
+        end_date: certificateEndDates[i]
+      });
+    }
+    return certificates;
+  }
+  
+  // Modify the /generate_resume route
   router.post('/generate_resume', async (req, res) => {
-    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificates } = req.body;
+    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
+    const { certificate_name, issuing_organization, certificate_start_date, certificate_end_date } = req.body;
   
     if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
       return res.status(400).send('All fields are required');
@@ -195,7 +205,7 @@ function parseCertificates(certificates) {
             });
           });
   
-          const parsedCertificates = parseCertificates(req.body);
+          const parsedCertificates = parseCertificates(certificate_name, issuing_organization, certificate_start_date, certificate_end_date);
           const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
           parsedCertificates.forEach(cert => {
             const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.start_date, cert.end_date, email];
