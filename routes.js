@@ -114,10 +114,21 @@ router.get('/resume', (req, res) => {
   res.render('resume', { user: req.session.user });
 });
 
-router.post('/generate_resume', async (req, res) => {
+// Add this code snippet where appropriate in the existing routes.js file
+
+// Function to handle splitting skills and proficiency levels
+function parseSkills(skills) {
+    return skills.split(',').map(skill => {
+      const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
+      return { skill_name, proficiency_level };
+    });
+  }
+  
+  // Modify the /generate_resume route
+  router.post('/generate_resume', async (req, res) => {
     const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
-
+  
     if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
       return res.status(400).send('All fields are required');
     }
@@ -161,7 +172,19 @@ router.post('/generate_resume', async (req, res) => {
             console.error('Error saving experience:', error);
             return res.status(500).send('Error saving experience');
           }
-          
+  
+          const parsedSkills = parseSkills(skills);
+          const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
+          parsedSkills.forEach(skill => {
+            const skillValues = [user.id, email, skill.skill_name, skill.proficiency_level];
+            connection.query(insertSkillsQuery, skillValues, (error, results) => {
+              if (error) {
+                console.error('Error saving skill:', error);
+                return res.status(500).send('Error saving skill');
+              }
+            });
+          });
+  
           const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
           const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
           connection.query(insertResumeQuery, resumeValues, (error, results) => {
@@ -183,7 +206,7 @@ router.post('/generate_resume', async (req, res) => {
               experience_start_date,
               experience_end_date,
               description: experiencePoints,
-              skills,
+              skills: parsedSkills,
               linkedUrl
             });
           });
@@ -254,9 +277,10 @@ router.get('/user/:email/experience', (req, res) => {
   });
 });
 
-router.get('/user/:email/skills', (req, res) => {
+  // New routes to fetch skill_name and proficiency_level
+  router.get('/user/:email/skills', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT skills FROM resumes WHERE email = ?';
+    const query = 'SELECT skill_name, proficiency_level FROM Skills s JOIN users u ON s.user_id = u.id WHERE u.email = ?';
   
     connection.query(query, [email], (error, results) => {
       if (error) {
@@ -268,7 +292,7 @@ router.get('/user/:email/skills', (req, res) => {
         return res.status(404).send('No skills found for the given email');
       }
   
-      res.json({ skills: results[0].skills });
+      res.json(results);
     });
   });
   
@@ -416,23 +440,6 @@ router.get('/user/:email/skills', (req, res) => {
     });
   });
   
-  router.get('/user/:email/skills', (req, res) => {
-    const email = req.params.email;
-    const query = 'SELECT skills FROM resumes WHERE email = ?';
-  
-    connection.query(query, [email], (error, results) => {
-      if (error) {
-        console.error('Error querying the database:', error);
-        return res.status(500).send('Error querying the database');
-      }
-  
-      if (results.length === 0) {
-        return res.status(404).send('No skills found for the given email');
-      }
-  
-      res.json({ skills: results[0].skills });
-    });
-  });
   
   router.get('/user/:email/phone', (req, res) => {
     const email = req.params.email;

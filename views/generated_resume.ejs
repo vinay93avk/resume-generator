@@ -39,7 +39,11 @@
             <% }); %>
         </ul>
         <h2>Skills</h2>
-        <p><%= skills %></p>
+        <ul>
+            <% skills.forEach(function(skill) { %>
+                <li><%= skill.skill_name %>: <%= skill.proficiency_level %></li>
+            <% }); %>
+        </ul>
         <% if (linkedUrl) { %>
             <h2>LinkedIn</h2>
             <p><a href="<%= linkedUrl %>"><%= linkedUrl %></a></p>
