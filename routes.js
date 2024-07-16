@@ -614,12 +614,15 @@ router.delete('/user/:email/experience/:id', (req, res) => {
 });
 
 // POST /user/:email/experience
-// POST /user/:email/experience
 router.post('/user/:email/experience', (req, res) => {
     const email = req.params.email;
     const { company_name, role, start_date, end_date, description } = req.body;
 
     console.log('Received data:', { company_name, role, start_date, end_date, description });
+
+    if (!company_name || !role || !start_date || !end_date || !description) {
+        return res.status(400).send('All fields are required');
+    }
 
     const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
     connection.query(getUserIdQuery, [email], (error, results) => {
