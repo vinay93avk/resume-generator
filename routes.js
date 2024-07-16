@@ -50,30 +50,62 @@ router.post('/signup', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  const query = 'SELECT * FROM users WHERE email = ?';
-  connection.query(query, [email], async (error, results) => {
-    if (error) {
-      console.error('Error querying the database:', error);
-      return res.status(500).send('Error querying the database');
-    }
-
-    if (results.length === 0) {
-      return res.status(401).send('Invalid email or password');
-    }
-
-    const user = results[0];
-    const passwordMatch = await bcrypt.compare(password, user.hashed_password);
-
-    if (!passwordMatch) {
-      return res.status(401).send('Invalid email or password');
-    }
-
-    req.session.user = user; // Save the user information in the session
-    res.redirect('/resume');
+    const { email, password } = req.body;
+  
+    const query = 'SELECT * FROM users WHERE email = ?';
+    connection.query(query, [email], async (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(401).send('Invalid email or password');
+      }
+  
+      const user = results[0];
+      const passwordMatch = await bcrypt.compare(password, user.hashed_password);
+  
+      if (!passwordMatch) {
+        return res.status(401).send('Invalid email or password');
+      }
+  
+      req.session.user = user; // Save the user information in the session
+  
+      // Insert login time into Sessions table
+      const loginTime = new Date();
+      const insertSessionQuery = 'INSERT INTO Sessions (user_id, email, login_time) VALUES (?, ?, ?)';
+      connection.query(insertSessionQuery, [user.id, email, loginTime], (sessionError) => {
+        if (sessionError) {
+          console.error('Error inserting session:', sessionError);
+          return res.status(500).send('Error inserting session');
+        }
+        res.redirect('/resume');
+      });
+    });
   });
-});
+
+  router.get('/logout', (req, res) => {
+    if (req.session.user) {
+      const user = req.session.user;
+      const logoutTime = new Date();
+  
+      const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND logout_time IS NULL';
+      connection.query(updateLogoutQuery, [logoutTime, user.id], (error, results) => {
+        if (error) {
+          console.error('Error updating session:', error);
+        }
+      });
+    }
+  
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).send('Failed to logout');
+      }
+      res.redirect('/');
+    });
+  });
+  
 
 router.get('/resume', (req, res) => {
   if (!req.session.user) {
@@ -509,7 +541,7 @@ router.get('/user/:email/skills', (req, res) => {
       res.json({ end_date: results[0].end_date });
     });
   });
-  
+
 
   module.exports = router;
   
