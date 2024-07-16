@@ -584,6 +584,36 @@ router.get('/user/:email/experience', (req, res) => {
     });
   });
 
+  // DELETE /user/:email/experience/:id
+router.delete('/user/:email/experience/:id', (req, res) => {
+    const email = req.params.email;
+    const experience_id = req.params.id;
+
+    const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+    connection.query(getUserIdQuery, [email], (error, results) => {
+        if (error) {
+            console.error('Error querying the database:', error);
+            return res.status(500).send('Error querying the database');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const user_id = results[0].id;
+        const deleteExperienceQuery = 'DELETE FROM Experience WHERE user_id = ? AND id = ?';
+
+        connection.query(deleteExperienceQuery, [user_id, experience_id], (error, results) => {
+            if (error) {
+                console.error('Error deleting experience:', error);
+                return res.status(500).send('Error deleting experience');
+            }
+            res.status(200).send('Experience deleted successfully');
+        });
+    });
+});
+
+
   router.get('/user/:email/login_time', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT DATE_FORMAT(s.login_time, "%Y-%m-%d %H:%i:%s") AS login_time FROM Sessions s JOIN users u ON s.user_id = u.id WHERE u.email = ? ORDER BY s.login_time DESC LIMIT 1';
