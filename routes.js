@@ -119,23 +119,22 @@ router.get('/resume', (req, res) => {
   res.render('resume', { user: req.session.user });
 });
 
-// Function to handle splitting skills and proficiency levels
-function parseSkills(skills) {
+function parseCertificates(certificates) {
+    return certificates.map((cert, index) => ({
+      certificate_name: cert.certificate_name[index],
+      issuing_organization: cert.issuing_organization[index],
+      start_date: cert.certificate_start_date[index],
+      end_date: cert.certificate_end_date[index]
+    }));
+  }
+  
+  function parseSkills(skills) {
     return skills.split(',').map(skill => {
       const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
       return { skill_name, proficiency_level };
     });
   }
   
-  // Function to handle parsing certificates
-  function parseCertificates(certificates) {
-    return certificates.split(';').map(cert => {
-      const [certificate_name, issuing_organization, start_date, end_date] = cert.split(',').map(s => s.trim());
-      return { certificate_name, issuing_organization, start_date, end_date };
-    });
-  }
-  
-  // Modify the /generate_resume route
   router.post('/generate_resume', async (req, res) => {
     const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificates } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
@@ -196,7 +195,7 @@ function parseSkills(skills) {
             });
           });
   
-          const parsedCertificates = parseCertificates(certificates);
+          const parsedCertificates = parseCertificates(req.body);
           const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
           parsedCertificates.forEach(cert => {
             const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.start_date, cert.end_date, email];

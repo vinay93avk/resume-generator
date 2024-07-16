@@ -55,10 +55,10 @@
             <div id="certificates-container">
                 <h3>Certificates</h3>
                 <div>
-                    <input type="text" name="certificate_name[]" placeholder="Certificate Name"><br>
-                    <input type="text" name="issuing_organization[]" placeholder="Issuing Organization"><br>
-                    <input type="date" name="certificate_start_date[]" placeholder="Start Date"><br>
-                    <input type="date" name="certificate_end_date[]" placeholder="End Date"><br>
+                    <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
+                    <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
+                    <input type="date" name="certificate_start_date[]" placeholder="Start Date" required><br>
+                    <input type="date" name="certificate_end_date[]" placeholder="End Date" required><br>
                 </div>
             </div>
             <button type="button" onclick="addCertificate()">Add Another Certificate</button><br><br>
@@ -68,3 +68,4 @@
     </div>
 </body>
 </html>
+
