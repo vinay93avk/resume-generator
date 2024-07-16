@@ -614,9 +614,12 @@ router.delete('/user/:email/experience/:id', (req, res) => {
 });
 
 // POST /user/:email/experience
+// POST /user/:email/experience
 router.post('/user/:email/experience', (req, res) => {
     const email = req.params.email;
     const { company_name, role, start_date, end_date, description } = req.body;
+
+    console.log('Received data:', { company_name, role, start_date, end_date, description });
 
     const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
     connection.query(getUserIdQuery, [email], (error, results) => {
@@ -630,14 +633,15 @@ router.post('/user/:email/experience', (req, res) => {
         }
 
         const user_id = results[0].id;
-        const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
-        const values = [user_id, company_name, role, start_date, end_date, description];
+        const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        const values = [user_id, company_name, role, start_date, end_date, description, email];
 
         connection.query(insertExperienceQuery, values, (error, results) => {
             if (error) {
                 console.error('Error inserting experience:', error);
                 return res.status(500).send('Error inserting experience');
             }
+            console.log('Experience added successfully:', results);
             res.status(201).send('Experience added successfully');
         });
     });
