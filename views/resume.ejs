@@ -35,11 +35,37 @@
             <input type="date" name="experience_start_date" placeholder="Experience Start Date" required><br>
             <input type="date" name="experience_end_date" placeholder="Experience End Date" required><br>
             <textarea name="description" placeholder="Experience Description" required></textarea><br>
-            <input type="text" name="skills" placeholder="Skills (format: skill:intermediate, skill:expert)" required><br>
+            <input type="text" name="skills" placeholder="Skills (e.g., Skill1:Expert, Skill2:Intermediate)" required><br>
             <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
             <textarea name="jobDescription" placeholder="Job Description" required></textarea><br>
+
+            <h3>Certificates</h3>
+            <div id="certificates">
+                <div class="certificate">
+                    <input type="text" name="certificate_name" placeholder="Certificate Name" required><br>
+                    <input type="text" name="issuing_organization" placeholder="Issuing Organization" required><br>
+                    <input type="date" name="issue_date" placeholder="Issue Date" required><br>
+                    <input type="date" name="expiration_date" placeholder="Expiration Date"><br>
+                </div>
+            </div>
+            <button type="button" onclick="addCertificate()">Add Another Certificate</button><br>
+
             <input type="submit" value="Generate Resume">
         </form>
     </div>
+    <script>
+        function addCertificate() {
+            const container = document.getElementById('certificates');
+            const newCert = document.createElement('div');
+            newCert.classList.add('certificate');
+            newCert.innerHTML = `
+                <input type="text" name="certificate_name" placeholder="Certificate Name" required><br>
+                <input type="text" name="issuing_organization" placeholder="Issuing Organization" required><br>
+                <input type="date" name="issue_date" placeholder="Issue Date" required><br>
+                <input type="date" name="expiration_date" placeholder="Expiration Date"><br>
+            `;
+            container.appendChild(newCert);
+        }
+    </script>
 </body>
 </html>

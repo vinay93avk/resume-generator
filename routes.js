@@ -131,10 +131,10 @@ function parseSkills(skills) {
   
   // Modify the /generate_resume route
   router.post('/generate_resume', async (req, res) => {
-    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription } = req.body;
+    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificates } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
   
-    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
+    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription || !certificates) {
       return res.status(400).send('All fields are required');
     }
   
@@ -190,6 +190,18 @@ function parseSkills(skills) {
             });
           });
   
+          const parsedCertificates = JSON.parse(certificates);
+          const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, email, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?, ?)';
+          parsedCertificates.forEach(cert => {
+            const certValues = [user.id, email, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date];
+            connection.query(insertCertificatesQuery, certValues, (error, results) => {
+              if (error) {
+                console.error('Error saving certificate:', error);
+                return res.status(500).send('Error saving certificate');
+              }
+            });
+          });
+  
           const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
           const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
           connection.query(insertResumeQuery, resumeValues, (error, results) => {
@@ -212,6 +224,7 @@ function parseSkills(skills) {
               experience_end_date,
               description: experiencePoints,
               skills: parsedSkills,
+              certificates: parsedCertificates,
               linkedUrl
             });
           });
@@ -627,7 +640,24 @@ router.get('/user/:email/experience', (req, res) => {
     });
   });
   
+  // Routes for fetching certificates
+router.get('/user/:email/certificates', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT certificate_name, issuing_organization, DATE_FORMAT(issue_date, "%Y-%m-%d") AS issue_date, DATE_FORMAT(expiration_date, "%Y-%m-%d") AS expiration_date FROM Certificates c JOIN users u ON c.user_id = u.id WHERE u.email = ?';
   
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No certificates found for the given email');
+      }
+  
+      res.json(results);
+    });
+  });
 
   module.exports = router;
   
