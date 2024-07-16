@@ -584,6 +584,44 @@ router.get('/user/:email/experience', (req, res) => {
       res.json({ logout_time: results[0].logout_time });
     });
   });
+
+  router.get('/user/:email/skills', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT skill_name, proficiency_level FROM Skills s JOIN users u ON s.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No skills found for the given email');
+      }
+  
+      res.json(results);
+    });
+  });
+  
+  router.get('/user/:email/proficiency_level/:skill_name', (req, res) => {
+    const email = req.params.email;
+    const skill_name = req.params.skill_name;
+    const query = 'SELECT proficiency_level FROM Skills s JOIN users u ON s.user_id = u.id WHERE u.email = ? AND s.skill_name = ?';
+  
+    connection.query(query, [email, skill_name], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No proficiency level found for the given skill and email');
+      }
+  
+      res.json({ proficiency_level: results[0].proficiency_level });
+    });
+  });
+  
   
 
   module.exports = router;
