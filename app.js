@@ -16,6 +16,7 @@ const dbConfig = {
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.use(express.static('public')); // Serve static files like CSS
 app.use(session({
   secret: 'your-secret-key',
