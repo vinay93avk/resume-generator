@@ -119,8 +119,6 @@ router.get('/resume', (req, res) => {
   res.render('resume', { user: req.session.user });
 });
 
-// Add this code snippet where appropriate in the existing routes.js file
-
 // Function to handle splitting skills and proficiency levels
 function parseSkills(skills) {
     return skills.split(',').map(skill => {
@@ -129,12 +127,20 @@ function parseSkills(skills) {
     });
   }
   
+  // Function to handle parsing certificates
+  function parseCertificates(certificates) {
+    return certificates.split(';').map(cert => {
+      const [certificate_name, issuing_organization, start_date, end_date] = cert.split(',').map(s => s.trim());
+      return { certificate_name, issuing_organization, start_date, end_date };
+    });
+  }
+  
   // Modify the /generate_resume route
   router.post('/generate_resume', async (req, res) => {
     const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificates } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
   
-    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription || !certificates) {
+    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
       return res.status(400).send('All fields are required');
     }
   
@@ -190,11 +196,11 @@ function parseSkills(skills) {
             });
           });
   
-          const parsedCertificates = JSON.parse(certificates);
-          const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, email, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?, ?)';
+          const parsedCertificates = parseCertificates(certificates);
+          const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
           parsedCertificates.forEach(cert => {
-            const certValues = [user.id, email, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date];
-            connection.query(insertCertificatesQuery, certValues, (error, results) => {
+            const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.start_date, cert.end_date, email];
+            connection.query(insertCertificatesQuery, certificateValues, (error, results) => {
               if (error) {
                 console.error('Error saving certificate:', error);
                 return res.status(500).send('Error saving certificate');
@@ -224,8 +230,8 @@ function parseSkills(skills) {
               experience_end_date,
               description: experiencePoints,
               skills: parsedSkills,
-              certificates: parsedCertificates,
-              linkedUrl
+              linkedUrl,
+              certificates: parsedCertificates
             });
           });
         });
@@ -235,6 +241,7 @@ function parseSkills(skills) {
       res.status(500).send('Error generating description');
     }
   });
+  
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';

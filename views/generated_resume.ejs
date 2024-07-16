@@ -41,25 +41,22 @@
         <h2>Skills</h2>
         <ul>
             <% skills.forEach(function(skill) { %>
-                <li><%= skill.skill_name %>: <%= skill.proficiency_level %></li>
-            <% }); %>
-        </ul>
-        <h2>Certificates</h2>
-        <ul>
-            <% certificates.forEach(function(cert) { %>
-                <li>
-                    <strong><%= cert.certificate_name %></strong> from <%= cert.issuing_organization %>
-                    <br>Issued: <%= cert.issue_date %>
-                    <% if (cert.expiration_date) { %>
-                        <br>Expires: <%= cert.expiration_date %>
-                    <% } %>
-                </li>
+                <li><%= skill.skill_name %> - <%= skill.proficiency_level %></li>
             <% }); %>
         </ul>
         <% if (linkedUrl) { %>
             <h2>LinkedIn</h2>
             <p><a href="<%= linkedUrl %>"><%= linkedUrl %></a></p>
         <% } %>
+        <h2>Certificates</h2>
+        <ul>
+            <% certificates.forEach(function(cert) { %>
+                <li>
+                    <strong><%= cert.certificate_name %></strong> from <%= cert.issuing_organization %><br>
+                    <em>Start Date:</em> <%= cert.start_date %>, <em>End Date:</em> <%= cert.end_date %>
+                </li>
+            <% }); %>
+        </ul>
     </div>
 </body>
 </html>

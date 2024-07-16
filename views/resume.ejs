@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resume Generator</title>
     <link rel="stylesheet" href="/styles.css">
+    <script>
+        function addCertificate() {
+            const container = document.getElementById("certificates-container");
+            const certificateDiv = document.createElement("div");
+            certificateDiv.innerHTML = `
+                <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
+                <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
+                <input type="date" name="certificate_start_date[]" placeholder="Start Date" required><br>
+                <input type="date" name="certificate_end_date[]" placeholder="End Date" required><br>
+            `;
+            container.appendChild(certificateDiv);
+        }
+    </script>
 </head>
 <body>
     <header>
@@ -35,37 +48,23 @@
             <input type="date" name="experience_start_date" placeholder="Experience Start Date" required><br>
             <input type="date" name="experience_end_date" placeholder="Experience End Date" required><br>
             <textarea name="description" placeholder="Experience Description" required></textarea><br>
-            <input type="text" name="skills" placeholder="Skills (e.g., Skill1:Expert, Skill2:Intermediate)" required><br>
+            <input type="text" name="skills" placeholder="Skills (format: skill:proficiency_level, ...)" required><br>
             <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
             <textarea name="jobDescription" placeholder="Job Description" required></textarea><br>
-
-            <h3>Certificates</h3>
-            <div id="certificates">
-                <div class="certificate">
-                    <input type="text" name="certificate_name" placeholder="Certificate Name" required><br>
-                    <input type="text" name="issuing_organization" placeholder="Issuing Organization" required><br>
-                    <input type="date" name="issue_date" placeholder="Issue Date" required><br>
-                    <input type="date" name="expiration_date" placeholder="Expiration Date"><br>
+            
+            <div id="certificates-container">
+                <h3>Certificates</h3>
+                <div>
+                    <input type="text" name="certificate_name[]" placeholder="Certificate Name"><br>
+                    <input type="text" name="issuing_organization[]" placeholder="Issuing Organization"><br>
+                    <input type="date" name="certificate_start_date[]" placeholder="Start Date"><br>
+                    <input type="date" name="certificate_end_date[]" placeholder="End Date"><br>
                 </div>
             </div>
-            <button type="button" onclick="addCertificate()">Add Another Certificate</button><br>
-
+            <button type="button" onclick="addCertificate()">Add Another Certificate</button><br><br>
+            
             <input type="submit" value="Generate Resume">
         </form>
     </div>
-    <script>
-        function addCertificate() {
-            const container = document.getElementById('certificates');
-            const newCert = document.createElement('div');
-            newCert.classList.add('certificate');
-            newCert.innerHTML = `
-                <input type="text" name="certificate_name" placeholder="Certificate Name" required><br>
-                <input type="text" name="issuing_organization" placeholder="Issuing Organization" required><br>
-                <input type="date" name="issue_date" placeholder="Issue Date" required><br>
-                <input type="date" name="expiration_date" placeholder="Expiration Date"><br>
-            `;
-            container.appendChild(newCert);
-        }
-    </script>
 </body>
 </html>
