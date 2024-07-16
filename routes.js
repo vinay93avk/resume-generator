@@ -438,5 +438,78 @@ router.get('/user/:email/skills', (req, res) => {
     });
   });
 
+  router.get('/user/:email/experience/company_name', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT company_name FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No company name found for the given email');
+      }
+  
+      res.json({ company_name: results[0].company_name });
+    });
+  });
+  
+  router.get('/user/:email/experience/role', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT role FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No role found for the given email');
+      }
+  
+      res.json({ role: results[0].role });
+    });
+  });
+  
+  router.get('/user/:email/experience/start_date', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT start_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No start date found for the given email');
+      }
+  
+      res.json({ start_date: results[0].start_date });
+    });
+  });
+  
+  router.get('/user/:email/experience/end_date', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT end_date FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No end date found for the given email');
+      }
+  
+      res.json({ end_date: results[0].end_date });
+    });
+  });
+  
+
   module.exports = router;
   
