@@ -90,8 +90,8 @@ router.post('/login', async (req, res) => {
       const user = req.session.user;
       const logoutTime = new Date();
   
-      const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND logout_time IS NULL';
-      connection.query(updateLogoutQuery, [logoutTime, user.id], (error, results) => {
+      const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND email = ? AND logout_time IS NULL';
+      connection.query(updateLogoutQuery, [logoutTime, user.id, user.email], (error, results) => {
         if (error) {
           console.error('Error updating session:', error);
         }
@@ -542,6 +542,42 @@ router.get('/user/:email/skills', (req, res) => {
     });
   });
 
+  router.get('/user/:email/login_time', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT DATE_FORMAT(s.login_time, "%Y-%m-%d %H:%i:%s") AS login_time FROM Sessions s JOIN users u ON s.user_id = u.id WHERE u.email = ? ORDER BY s.login_time DESC LIMIT 1';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No login time found for the given email');
+      }
+  
+      res.json({ login_time: results[0].login_time });
+    });
+  });
+  
+  router.get('/user/:email/logout_time', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT DATE_FORMAT(s.logout_time, "%Y-%m-%d %H:%i:%s") AS logout_time FROM Sessions s JOIN users u ON s.user_id = u.id WHERE u.email = ? ORDER BY s.logout_time DESC LIMIT 1';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No logout time found for the given email');
+      }
+  
+      res.json({ logout_time: results[0].logout_time });
+    });
+  });
+  
 
   module.exports = router;
   
