@@ -89,21 +89,26 @@ router.post('/login', async (req, res) => {
     if (req.session.user) {
       const user = req.session.user;
       const logoutTime = new Date();
+      console.log(`Updating logout time for user: ${user.id}, email: ${user.email}, logoutTime: ${logoutTime}`);
   
       const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND email = ? AND logout_time IS NULL';
       connection.query(updateLogoutQuery, [logoutTime, user.id, user.email], (error, results) => {
         if (error) {
           console.error('Error updating session:', error);
+          return res.status(500).send('Error updating session');
         }
-      });
-    }
+        console.log('Logout time updated successfully');
   
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).send('Failed to logout');
-      }
+        req.session.destroy((err) => {
+          if (err) {
+            return res.status(500).send('Failed to logout');
+          }
+          res.redirect('/');
+        });
+      });
+    } else {
       res.redirect('/');
-    });
+    }
   });
   
 
