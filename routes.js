@@ -656,6 +656,12 @@ router.put('/user/:email/experience/:id', (req, res) => {
     const experience_id = req.params.id;
     const { company_name, role, start_date, end_date, description } = req.body;
 
+    console.log('Received data:', { company_name, role, start_date, end_date, description });
+
+    if (!company_name || !role || !start_date || !end_date || !description) {
+        return res.status(400).send('All fields are required');
+    }
+
     const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
     connection.query(getUserIdQuery, [email], (error, results) => {
         if (error) {
