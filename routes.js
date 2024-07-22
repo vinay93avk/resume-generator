@@ -274,11 +274,14 @@ router.post('/generate_resume', async (req, res) => {
                 email,
                 phone,
                 education: parsedEducation,
-                experience: parsedExperience,
+                experience: parsedExperience.map(exp => ({
+                    ...exp,
+                    description: exp.description.split('. ').map(point => point.trim() + '.').filter(point => point.length > 1) // Split description back into array
+                })),
                 skills: parsedSkills,
                 linkedUrl,
                 certificates: parsedCertificates
-            });
+            });            
         });
     } catch (error) {
         console.error('Error generating description:', error);
