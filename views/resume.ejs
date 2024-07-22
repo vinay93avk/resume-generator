@@ -18,6 +18,12 @@
             container.appendChild(certificateDiv);
         }
     </script>
+    <style>
+        .required-indicator {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -36,14 +42,14 @@
         <h2>Resume Input Form</h2>
         <form action="/generate_resume" method="post">
             <section>
-                <h3>Personal Information</h3>
+                <h3>Personal Information <span class="required-indicator">*</span></h3>
                 <input type="text" name="firstName" placeholder="First Name" value="<%= user.firstName %>" required readonly><br>
                 <input type="text" name="lastName" placeholder="Last Name" value="<%= user.lastName %>" required readonly><br>
                 <input type="email" name="email" placeholder="Email" value="<%= user.email %>" required readonly><br>
                 <input type="text" name="phone" placeholder="Phone" value="<%= user.phone %>" required readonly><br>
             </section>
             <section>
-                <h3>Education</h3>
+                <h3>Education <span class="required-indicator">*</span></h3>
                 <input type="text" name="degree" placeholder="Degree" required><br>
                 <input type="text" name="institution" placeholder="Institution" required><br>
                 <input type="date" name="startDate" placeholder="Start Date" required><br>
@@ -58,19 +64,19 @@
                 <textarea name="description" placeholder="Experience Description" required></textarea><br>
             </section>
             <section>
-                <h3>Skills</h3>
+                <h3>Skills <span class="required-indicator">*</span></h3>
                 <input type="text" name="skills" placeholder="Skills (format: skill:proficiency_level, ...)" required><br>
             </section>
             <section>
-                <h3>LinkedIn</h3>
+                <h3>LinkedIn <span class="required-indicator">*</span></h3>
                 <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
             </section>
             <section>
-                <h3>Job Description</h3>
+                <h3>Job Description <span class="required-indicator">*</span></h3>
                 <textarea name="jobDescription" placeholder="Job Description" required></textarea><br>
             </section>
             <section id="certificates-container">
-                <h3>Certificates</h3>
+                <h3>Certificates <span class="required-indicator">*</span></h3>
                 <div>
                     <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
                     <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
