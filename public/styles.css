@@ -10,7 +10,7 @@ header {
     color: #ffffff;
     padding-top: 30px;
     min-height: 70px;
-    border-bottom: #1e90ff 3px solid; /* Changed to light blue */
+    border-bottom: #007bff 3px solid; /* Light blue border */
 }
 
 header a {
@@ -40,7 +40,7 @@ header nav {
 }
 
 header .highlight, header .current a {
-    color: #1e90ff; /* Changed to light blue */
+    color: #007bff; /* Light blue highlight */
     font-weight: bold;
 }
 
@@ -58,10 +58,12 @@ h1, h2, h3 {
 form input[type="text"],
 form input[type="email"],
 form input[type="password"],
+form input[type="date"],
 form textarea {
     width: 100%;
     padding: 10px;
     margin: 10px 0;
+    box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 form input[type="submit"] {
@@ -75,10 +77,9 @@ form input[type="submit"] {
 }
 
 form input[type="submit"]:hover {
-    background: #1e90ff; /* Changed to light blue */
+    background: #007bff; /* Light blue hover */
 }
 
 .required-indicator {
-    color: #1e90ff; /* Changed to light blue */
-    font-weight: bold;
+    color: red;
 }

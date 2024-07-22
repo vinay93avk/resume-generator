@@ -18,12 +18,6 @@
             container.appendChild(certificateDiv);
         }
     </script>
-    <style>
-        .required-indicator {
-            color: red;
-            font-weight: bold;
-        }
-    </style>
 </head>
 <body>
     <header>
@@ -48,6 +42,7 @@
                 <input type="email" name="email" placeholder="Email" value="<%= user.email %>" required readonly><br>
                 <input type="text" name="phone" placeholder="Phone" value="<%= user.phone %>" required readonly><br>
             </section>
+
             <section>
                 <h3>Education <span class="required-indicator">*</span></h3>
                 <input type="text" name="degree" placeholder="Degree" required><br>
@@ -55,6 +50,7 @@
                 <input type="date" name="startDate" placeholder="Start Date" required><br>
                 <input type="date" name="endDate" placeholder="End Date" required><br>
             </section>
+
             <section>
                 <h3>Experience</h3>
                 <input type="text" name="company_name" placeholder="Company Name" required><br>
@@ -63,28 +59,35 @@
                 <input type="date" name="experience_end_date" placeholder="Experience End Date" required><br>
                 <textarea name="description" placeholder="Experience Description" required></textarea><br>
             </section>
+
             <section>
                 <h3>Skills <span class="required-indicator">*</span></h3>
                 <input type="text" name="skills" placeholder="Skills (format: skill:proficiency_level, ...)" required><br>
             </section>
+
             <section>
                 <h3>LinkedIn <span class="required-indicator">*</span></h3>
                 <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
             </section>
+
             <section>
                 <h3>Job Description <span class="required-indicator">*</span></h3>
                 <textarea name="jobDescription" placeholder="Job Description" required></textarea><br>
             </section>
-            <section id="certificates-container">
+
+            <section>
                 <h3>Certificates <span class="required-indicator">*</span></h3>
-                <div>
-                    <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
-                    <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
-                    <input type="date" name="issue_date[]" placeholder="Issue Date" required><br>
-                    <input type="date" name="expiration_date[]" placeholder="Expiration Date" required><br>
+                <div id="certificates-container">
+                    <div>
+                        <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
+                        <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
+                        <input type="date" name="issue_date[]" placeholder="Issue Date" required><br>
+                        <input type="date" name="expiration_date[]" placeholder="Expiration Date" required><br>
+                    </div>
                 </div>
+                <button type="button" onclick="addCertificate()">Add Another Certificate</button><br><br>
             </section>
-            <button type="button" onclick="addCertificate()">Add Another Certificate</button><br><br>
+            
             <input type="submit" value="Generate Resume">
         </form>
     </div>
