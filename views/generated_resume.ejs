@@ -23,6 +23,7 @@
         <h1>Resume for <%= firstName %> <%= lastName %></h1>
         <p>Email: <%= email %></p>
         <p>Phone: <%= phone %></p>
+        
         <h2>Education</h2>
         <% education.forEach(function(edu) { %>
             <div>
@@ -32,30 +33,34 @@
                 <p>End Date: <%= edu.end_date %></p>
             </div>
         <% }); %>
+        
         <h2>Experience</h2>
         <% experience.forEach(function(exp) { %>
             <div>
                 <p>Company Name: <%= exp.company_name %></p>
                 <p>Role: <%= exp.role %></p>
-                <p>Experience Start Date: <%= exp.start_date %></p>
-                <p>Experience End Date: <%= exp.end_date %></p>
+                <p>Experience Start Date: <%= exp.experience_start_date %></p>
+                <p>Experience End Date: <%= exp.experience_end_date %></p>
                 <ul>
-                    <% exp.description.forEach(function(point) { %>
+                    <% exp.description.split('. ').forEach(function(point) { %>
                         <li><%= point %></li>
                     <% }); %>
                 </ul>
             </div>
         <% }); %>
+        
         <h2>Skills</h2>
         <ul>
             <% skills.forEach(function(skill) { %>
                 <li><%= skill.skill_name %> - <%= skill.proficiency_level %></li>
             <% }); %>
         </ul>
+        
         <% if (linkedUrl) { %>
             <h2>LinkedIn</h2>
             <p><a href="<%= linkedUrl %>" target="_blank"><%= linkedUrl %></a></p>
         <% } %>
+        
         <h2>Certificates</h2>
         <ul>
             <% certificates.forEach(function(cert) { %>
