@@ -217,9 +217,9 @@ router.post('/generate_resume', async (req, res) => {
         // Generate experience points for each experience entry
         const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
 
-        // Add generated experience points to each experience entry
+// Add generated experience points to each experience entry
         parsedExperience.forEach((exp, index) => {
-            exp.description = experiencePointsArray[index].join('. '); // Ensure it's a string
+            exp.description = experiencePointsArray[index]; // Ensure it's a string
         });
 
         // Inserting Education

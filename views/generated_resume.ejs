@@ -37,11 +37,11 @@
             <p>Experience Start Date: <%= exp.experience_start_date %></p>
             <p>Experience End Date: <%= exp.experience_end_date %></p>
             <ul>
-                <% exp.description.split('. ').forEach(function(point) { %>
+                <% exp.description.split('; ').forEach(function(point) { %>
                     <li><%= point %></li>
                 <% }); %>
             </ul>
-        <% }); %>
+        <% }); %>        
         <h2>Skills</h2>
         <ul>
             <% skills.forEach(function(skill) { %>
