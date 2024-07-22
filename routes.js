@@ -190,7 +190,7 @@ router.post('/generate_resume', async (req, res) => {
     // Function to generate experience points for each experience
     const generateExperiencePoints = async (exp, jobDescription, skills) => {
         const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
-        
+    
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: 'gpt-4',
             messages: [
@@ -203,23 +203,23 @@ router.post('/generate_resume', async (req, res) => {
                 'Content-Type': 'application/json'
             }
         });
-
+    
         const experienceDescription = response.data.choices[0].message.content.trim();
         const experiencePoints = experienceDescription
             .split('\n')
             .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
             .filter(line => line.trim() !== '.');
-
-        return experiencePoints.join(' '); // Join back to a single string
+    
+        return experiencePoints; // Return the array of points
     };
 
     try {
         // Generate experience points for each experience entry
         const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
-        
+
         // Add generated experience points to each experience entry
         parsedExperience.forEach((exp, index) => {
-            exp.description = experiencePointsArray[index]; // Ensure it's a string
+            exp.description = experiencePointsArray[index].join('. '); // Ensure it's a string
         });
 
         // Inserting Education
@@ -295,14 +295,13 @@ router.post('/generate_resume', async (req, res) => {
                 skills: parsedSkills,
                 linkedUrl,
                 certificates: parsedCertificates
-            });            
+            });
         });
     } catch (error) {
         console.error('Error generating description:', error);
         res.status(500).send('Error generating description');
     }
 });
-
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
