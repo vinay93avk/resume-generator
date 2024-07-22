@@ -178,9 +178,18 @@ router.post('/generate_resume', async (req, res) => {
         return res.status(400).send('All fields are required');
     }
 
-    const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+    const user = req.session.user;
 
-    try {
+    // Parsing Education, Experience, Skills, and Certificates
+    const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+    const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+    const parsedSkills = parseSkills(skills);
+    const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+
+    // Function to generate experience points for each experience
+    const generateExperiencePoints = async (exp, jobDescription, skills) => {
+        const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+        
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: 'gpt-4',
             messages: [
@@ -200,13 +209,17 @@ router.post('/generate_resume', async (req, res) => {
             .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
             .filter(line => line.trim() !== '.');
 
-        const user = req.session.user;
+        return experiencePoints;
+    };
 
-        // Parsing Education, Experience, Skills, and Certificates
-        const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-        const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-        const parsedSkills = parseSkills(skills);
-        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+    try {
+        // Generate experience points for each experience entry
+        const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
+        
+        // Add generated experience points to each experience entry
+        parsedExperience.forEach((exp, index) => {
+            exp.description = experiencePointsArray[index];
+        });
 
         // Inserting Education
         parsedEducation.forEach(edu => {
@@ -223,7 +236,7 @@ router.post('/generate_resume', async (req, res) => {
         // Inserting Experience
         parsedExperience.forEach(exp => {
             const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-            const experienceValues = [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email];
+            const experienceValues = [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description.join(' '), email];
             connection.query(insertExperienceQuery, experienceValues, (error, results) => {
                 if (error) {
                     console.error('Error saving experience:', error);
@@ -258,7 +271,7 @@ router.post('/generate_resume', async (req, res) => {
 
         // Create combined descriptions for education and experience
         const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
-        const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
+        const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description.join(' ')}`).join('; ');
 
         // Inserting into resumes table
         const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
@@ -281,13 +294,14 @@ router.post('/generate_resume', async (req, res) => {
                 skills: parsedSkills,
                 linkedUrl,
                 certificates: parsedCertificates
-            });            
+            });
         });
     } catch (error) {
         console.error('Error generating description:', error);
         res.status(500).send('Error generating description');
     }
 });
+
 
 
 
