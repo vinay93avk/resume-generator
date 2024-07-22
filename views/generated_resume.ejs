@@ -25,26 +25,22 @@
         <p>Phone: <%= phone %></p>
         <h2>Education</h2>
         <% education.forEach(function(edu) { %>
-            <div>
-                <p>Degree: <%= edu.degree %></p>
-                <p>Institution: <%= edu.institution %></p>
-                <p>Start Date: <%= edu.start_date %></p>
-                <p>End Date: <%= edu.end_date %></p>
-            </div>
+            <p>Degree: <%= edu.degree %></p>
+            <p>Institution: <%= edu.institution %></p>
+            <p>Start Date: <%= edu.start_date %></p>
+            <p>End Date: <%= edu.end_date %></p>
         <% }); %>
         <h2>Experience</h2>
         <% experience.forEach(function(exp) { %>
-            <div>
-                <p>Company Name: <%= exp.company_name %></p>
-                <p>Role: <%= exp.role %></p>
-                <p>Experience Start Date: <%= exp.start_date %></p>
-                <p>Experience End Date: <%= exp.end_date %></p>
-                <ul>
-                    <% exp.description.forEach(function(point) { %>
-                        <li><%= point %></li>
-                    <% }); %>
-                </ul>
-            </div>
+            <p>Company Name: <%= exp.company_name %></p>
+            <p>Role: <%= exp.role %></p>
+            <p>Experience Start Date: <%= exp.experience_start_date %></p>
+            <p>Experience End Date: <%= exp.experience_end_date %></p>
+            <ul>
+                <% exp.description.split('. ').forEach(function(point) { %>
+                    <li><%= point %></li>
+                <% }); %>
+            </ul>
         <% }); %>
         <h2>Skills</h2>
         <ul>
@@ -68,3 +64,4 @@
     </div>
 </body>
 </html>
+

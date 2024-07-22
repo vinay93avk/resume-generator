@@ -170,6 +170,7 @@ function parseExperience(companyNames, roles, startDates, endDates, descriptions
 }
 
 // Modify the /generate_resume route
+// Modify the /generate_resume route
 router.post('/generate_resume', async (req, res) => {
     const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
@@ -178,9 +179,18 @@ router.post('/generate_resume', async (req, res) => {
         return res.status(400).send('All fields are required');
     }
 
-    const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+    const user = req.session.user;
 
-    try {
+    // Parsing Education, Experience, Skills, and Certificates
+    const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+    const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+    const parsedSkills = parseSkills(skills);
+    const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+
+    // Function to generate experience points for each experience
+    const generateExperiencePoints = async (exp, jobDescription, skills) => {
+        const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+        
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: 'gpt-4',
             messages: [
@@ -200,13 +210,17 @@ router.post('/generate_resume', async (req, res) => {
             .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
             .filter(line => line.trim() !== '.');
 
-        const user = req.session.user;
+        return experiencePoints.join(' '); // Join back to a single string
+    };
 
-        // Parsing Education, Experience, Skills, and Certificates
-        const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-        const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-        const parsedSkills = parseSkills(skills);
-        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+    try {
+        // Generate experience points for each experience entry
+        const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
+        
+        // Add generated experience points to each experience entry
+        parsedExperience.forEach((exp, index) => {
+            exp.description = experiencePointsArray[index]; // Ensure it's a string
+        });
 
         // Inserting Education
         parsedEducation.forEach(edu => {
