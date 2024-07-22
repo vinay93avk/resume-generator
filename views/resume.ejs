@@ -17,6 +17,31 @@
             `;
             container.appendChild(certificateDiv);
         }
+
+        function addEducation() {
+            const container = document.getElementById("education-container");
+            const educationDiv = document.createElement("div");
+            educationDiv.innerHTML = `
+                <input type="text" name="degree[]" placeholder="Degree" required><br>
+                <input type="text" name="institution[]" placeholder="Institution" required><br>
+                <input type="date" name="startDate[]" placeholder="Start Date" required><br>
+                <input type="date" name="endDate[]" placeholder="End Date" required><br>
+            `;
+            container.appendChild(educationDiv);
+        }
+
+        function addExperience() {
+            const container = document.getElementById("experience-container");
+            const experienceDiv = document.createElement("div");
+            experienceDiv.innerHTML = `
+                <input type="text" name="company_name[]" placeholder="Company Name" required><br>
+                <input type="text" name="role[]" placeholder="Role" required><br>
+                <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" required><br>
+                <input type="date" name="experience_end_date[]" placeholder="Experience End Date" required><br>
+                <textarea name="description[]" placeholder="Experience Description" required></textarea><br>
+            `;
+            container.appendChild(experienceDiv);
+        }
     </script>
 </head>
 <body>
@@ -45,10 +70,15 @@
 
             <section>
                 <h3>Education <span class="required-indicator">*</span></h3>
-                <input type="text" name="degree" placeholder="Degree" required><br>
-                <input type="text" name="institution" placeholder="Institution" required><br>
-                <input type="date" name="startDate" placeholder="Start Date" required><br>
-                <input type="date" name="endDate" placeholder="End Date" required><br>
+                <div id="education-container">
+                    <div>
+                        <input type="text" name="degree[]" placeholder="Degree" required><br>
+                        <input type="text" name="institution[]" placeholder="Institution" required><br>
+                        <input type="date" name="startDate[]" placeholder="Start Date" required><br>
+                        <input type="date" name="endDate[]" placeholder="End Date" required><br>
+                    </div>
+                </div>
+                <button type="button" onclick="addEducation()">Add Another Education</button><br><br>
             </section>
 
             <section>
@@ -58,11 +88,16 @@
 
             <section>
                 <h3>Experience</h3>
-                <input type="text" name="company_name" placeholder="Company Name" required><br>
-                <input type="text" name="role" placeholder="Role" required><br>
-                <input type="date" name="experience_start_date" placeholder="Experience Start Date" required><br>
-                <input type="date" name="experience_end_date" placeholder="Experience End Date" required><br>
-                <textarea name="description" placeholder="Experience Description" required></textarea><br>
+                <div id="experience-container">
+                    <div>
+                        <input type="text" name="company_name[]" placeholder="Company Name" required><br>
+                        <input type="text" name="role[]" placeholder="Role" required><br>
+                        <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" required><br>
+                        <input type="date" name="experience_end_date[]" placeholder="Experience End Date" required><br>
+                        <textarea name="description[]" placeholder="Experience Description" required></textarea><br>
+                    </div>
+                </div>
+                <button type="button" onclick="addExperience()">Add Another Experience</button><br><br>
             </section>
 
             <section>
