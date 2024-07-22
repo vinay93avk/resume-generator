@@ -202,7 +202,13 @@ router.post('/generate_resume', async (req, res) => {
 
         const user = req.session.user;
 
+        // Parsing Education, Experience, Skills, and Certificates
         const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+        const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+        const parsedSkills = parseSkills(skills);
+        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+
+        // Inserting Education
         parsedEducation.forEach(edu => {
             const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
             const educationValues = [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email];
@@ -214,7 +220,7 @@ router.post('/generate_resume', async (req, res) => {
             });
         });
 
-        const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+        // Inserting Experience
         parsedExperience.forEach(exp => {
             const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
             const experienceValues = [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email];
@@ -226,10 +232,10 @@ router.post('/generate_resume', async (req, res) => {
             });
         });
 
-        const parsedSkills = parseSkills(skills);
-        const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
+        // Inserting Skills
         parsedSkills.forEach(skill => {
             const skillValues = [user.id, email, skill.skill_name, skill.proficiency_level];
+            const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
             connection.query(insertSkillsQuery, skillValues, (error, results) => {
                 if (error) {
                     console.error('Error saving skill:', error);
@@ -238,10 +244,10 @@ router.post('/generate_resume', async (req, res) => {
             });
         });
 
-        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
-        const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
+        // Inserting Certificates
         parsedCertificates.forEach(cert => {
             const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email];
+            const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
             connection.query(insertCertificatesQuery, certificateValues, (error, results) => {
                 if (error) {
                     console.error('Error saving certificate:', error);
@@ -250,8 +256,9 @@ router.post('/generate_resume', async (req, res) => {
             });
         });
 
-        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
+        // Inserting into resumes table
+        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const resumeValues = [user.id, firstName, lastName, email, phone, degree.join('; '), institution.join('; '), startDate.join('; '), endDate.join('; '), experiencePoints.join(' '), skills, linkedUrl];
         connection.query(insertResumeQuery, resumeValues, (error, results) => {
             if (error) {
                 console.error('Error saving resume:', error);
@@ -274,6 +281,7 @@ router.post('/generate_resume', async (req, res) => {
         res.status(500).send('Error generating description');
     }
 });
+
 
 
 router.get('/user-count', (req, res) => {
