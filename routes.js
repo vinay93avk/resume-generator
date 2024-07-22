@@ -119,138 +119,141 @@ router.get('/resume', (req, res) => {
 });
 
 function parseSkills(skills) {
-  return skills.split(',').map(skill => {
-    const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
-    return { skill_name, proficiency_level };
-  });
+    return skills.split(',').map(skill => {
+        const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
+        return { skill_name, proficiency_level };
+    });
 }
 
 function parseCertificates(certificateNames, issuingOrganizations, issueDates, expirationDates) {
-  const certificates = [];
-  for (let i = 0; i < certificateNames.length; i++) {
-    certificates.push({
-      certificate_name: certificateNames[i],
-      issuing_organization: issuingOrganizations[i],
-      issue_date: issueDates[i],
-      expiration_date: expirationDates[i]
-    });
-  }
-  return certificates;
+    const certificates = [];
+    for (let i = 0; i < certificateNames.length; i++) {
+        certificates.push({
+            certificate_name: certificateNames[i],
+            issuing_organization: issuingOrganizations[i],
+            issue_date: issueDates[i],
+            expiration_date: expirationDates[i]
+        });
+    }
+    return certificates;
 }
+
 
 // Modify the /generate_resume route
 router.post('/generate_resume', async (req, res) => {
-  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
-  const { firstName, lastName, email, phone } = req.session.user;
+    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
+    const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
-    return res.status(400).send('All fields are required');
-  }
+    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
+        return res.status(400).send('All fields are required');
+    }
 
-  const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+    const prompt = `Generate concise bullet points for the experience section based on experience at ${company_name} as a ${role} from ${experience_start_date} to ${experience_end_date}, a ${degree} from ${institution}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
 
-  try {
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt }
-      ]
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const experienceDescription = response.data.choices[0].message.content.trim();
-    const experiencePoints = experienceDescription
-      .split('\n')
-      .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
-      .filter(line => line.trim() !== '.');
-
-    const user = req.session.user;
-
-    const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-    const educationValues = [user.id, degree, institution, startDate, endDate, email];
-    connection.query(insertEducationQuery, educationValues, (error, results) => {
-      if (error) {
-        console.error('Error saving education:', error);
-        return res.status(500).send('Error saving education');
-      }
-
-      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-      const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, experiencePoints.join(' '), email];
-      connection.query(insertExperienceQuery, experienceValues, (error, results) => {
-        if (error) {
-          console.error('Error saving experience:', error);
-          return res.status(500).send('Error saving experience');
-        }
-
-        const parsedSkills = parseSkills(skills);
-        const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
-        parsedSkills.forEach(skill => {
-          const skillValues = [user.id, email, skill.skill_name, skill.proficiency_level];
-          connection.query(insertSkillsQuery, skillValues, (error, results) => {
-            if (error) {
-              console.error('Error saving skill:', error);
-              return res.status(500).send('Error saving skill');
+    try {
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: 'gpt-4',
+            messages: [
+                { role: 'system', content: 'You are a helpful assistant.' },
+                { role: 'user', content: prompt }
+            ]
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
             }
-          });
         });
 
-        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
-        const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-        parsedCertificates.forEach(cert => {
-          const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email];
-          connection.query(insertCertificatesQuery, certificateValues, (error, results) => {
+        const experienceDescription = response.data.choices[0].message.content.trim();
+        const experiencePoints = experienceDescription
+            .split('\n')
+            .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
+            .filter(line => line.trim() !== '.');
+
+        const user = req.session.user;
+
+        // Insert Education details
+        const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
+        const educationValues = [user.id, degree[0], institution[0], startDate[0], endDate[0], email];
+        connection.query(insertEducationQuery, educationValues, (error, results) => {
             if (error) {
-              console.error('Error saving certificate:', error);
-              return res.status(500).send('Error saving certificate');
+                console.error('Error saving education:', error);
+                return res.status(500).send('Error saving education');
             }
-          });
-        });
 
-        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
-        connection.query(insertResumeQuery, resumeValues, (error, results) => {
-          if (error) {
-            console.error('Error saving resume:', error);
-            return res.status(500).send('Error saving resume');
-          }
-          res.render('generated_resume', {
-            firstName,
-            lastName,
-            email,
-            phone,
-            education: [{
-              degree,
-              institution,
-              startDate,
-              endDate
-            }],
-            experience: [{
-              company_name,
-              role,
-              experience_start_date,
-              experience_end_date,
-              description: experiencePoints
-            }],
-            skills: parsedSkills,
-            linkedUrl,
-            certificates: parsedCertificates
-          });
+            // Insert Experience details
+            const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            const experienceValues = [user.id, company_name[0], role[0], experience_start_date[0], experience_end_date[0], experiencePoints.join(' '), email];
+            connection.query(insertExperienceQuery, experienceValues, (error, results) => {
+                if (error) {
+                    console.error('Error saving experience:', error);
+                    return res.status(500).send('Error saving experience');
+                }
+
+                // Insert Skills
+                const parsedSkills = parseSkills(skills);
+                const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
+                parsedSkills.forEach(skill => {
+                    const skillValues = [user.id, email, skill.skill_name, skill.proficiency_level];
+                    connection.query(insertSkillsQuery, skillValues, (error, results) => {
+                        if (error) {
+                            console.error('Error saving skill:', error);
+                            return res.status(500).send('Error saving skill');
+                        }
+                    });
+                });
+
+                // Insert Certificates
+                const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+                const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
+                parsedCertificates.forEach(cert => {
+                    const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email];
+                    connection.query(insertCertificatesQuery, certificateValues, (error, results) => {
+                        if (error) {
+                            console.error('Error saving certificate:', error);
+                            return res.status(500).send('Error saving certificate');
+                        }
+                    });
+                });
+
+                const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
+                connection.query(insertResumeQuery, resumeValues, (error, results) => {
+                    if (error) {
+                        console.error('Error saving resume:', error);
+                        return res.status(500).send('Error saving resume');
+                    }
+                    res.render('generated_resume', {
+                        firstName,
+                        lastName,
+                        email,
+                        phone,
+                        education: [{
+                            degree: degree[0],
+                            institution: institution[0],
+                            startDate: startDate[0],
+                            endDate: endDate[0]
+                        }],
+                        experience: [{
+                            company_name: company_name[0],
+                            role: role[0],
+                            experience_start_date: experience_start_date[0],
+                            experience_end_date: experience_end_date[0],
+                            description: experiencePoints
+                        }],
+                        skills: parsedSkills,
+                        linkedUrl,
+                        certificates: parsedCertificates
+                    });
+                });
+            });
         });
-      });
-    });
-  } catch (error) {
-    console.error('Error generating description:', error);
-    res.status(500).send('Error generating description');
-  }
+    } catch (error) {
+        console.error('Error generating description:', error);
+        res.status(500).send('Error generating description');
+    }
 });
 
-
-  
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
