@@ -256,9 +256,13 @@ router.post('/generate_resume', async (req, res) => {
             });
         });
 
+        // Create combined descriptions for education and experience
+        const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
+        const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
+
         // Inserting into resumes table
-        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const resumeValues = [user.id, firstName, lastName, email, phone, degree.join('; '), institution.join('; '), startDate.join('; '), endDate.join('; '), experiencePoints.join(' '), skills, linkedUrl];
+        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
         connection.query(insertResumeQuery, resumeValues, (error, results) => {
             if (error) {
                 console.error('Error saving resume:', error);
@@ -281,6 +285,7 @@ router.post('/generate_resume', async (req, res) => {
         res.status(500).send('Error generating description');
     }
 });
+
 
 
 
