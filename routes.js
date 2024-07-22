@@ -169,8 +169,6 @@ function parseExperience(companyNames, roles, startDates, endDates, descriptions
     return experience;
 }
 
-// Modify the /generate_resume route
-// Modify the /generate_resume route
 router.post('/generate_resume', async (req, res) => {
     const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
     const { firstName, lastName, email, phone } = req.session.user;
@@ -190,7 +188,7 @@ router.post('/generate_resume', async (req, res) => {
     // Function to generate experience points for each experience
     const generateExperiencePoints = async (exp, jobDescription, skills) => {
         const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
-    
+        
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: 'gpt-4',
             messages: [
@@ -203,13 +201,13 @@ router.post('/generate_resume', async (req, res) => {
                 'Content-Type': 'application/json'
             }
         });
-    
+
         const experienceDescription = response.data.choices[0].message.content.trim();
         const experiencePoints = experienceDescription
             .split('\n')
             .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
             .filter(line => line.trim() !== '.');
-    
+
         return experiencePoints; // Return the array of points
     };
 
@@ -217,9 +215,9 @@ router.post('/generate_resume', async (req, res) => {
         // Generate experience points for each experience entry
         const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
 
-// Add generated experience points to each experience entry
+        // Add generated experience points to each experience entry
         parsedExperience.forEach((exp, index) => {
-            exp.description = experiencePointsArray[index]; // Ensure it's a string
+            exp.description = experiencePointsArray[index].join('; '); // Ensure it's a string
         });
 
         // Inserting Education
@@ -290,7 +288,7 @@ router.post('/generate_resume', async (req, res) => {
                 education: parsedEducation,
                 experience: parsedExperience.map(exp => ({
                     ...exp,
-                    description: exp.description.split('. ').map(point => point.trim() + '.').filter(point => point.length > 1) // Split description back into array
+                    description: exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) // Split description back into array
                 })),
                 skills: parsedSkills,
                 linkedUrl,
@@ -302,6 +300,7 @@ router.post('/generate_resume', async (req, res) => {
         res.status(500).send('Error generating description');
     }
 });
+
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
