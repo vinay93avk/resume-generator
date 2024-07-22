@@ -35,25 +35,36 @@
     <div class="container">
         <h2>Resume Input Form</h2>
         <form action="/generate_resume" method="post">
+            <h3>Personal Information</h3>
             <input type="text" name="firstName" placeholder="First Name" value="<%= user.firstName %>" required readonly><br>
             <input type="text" name="lastName" placeholder="Last Name" value="<%= user.lastName %>" required readonly><br>
             <input type="email" name="email" placeholder="Email" value="<%= user.email %>" required readonly><br>
             <input type="text" name="phone" placeholder="Phone" value="<%= user.phone %>" required readonly><br>
+            
+            <h3>Education</h3>
             <input type="text" name="degree" placeholder="Degree" required><br>
             <input type="text" name="institution" placeholder="Institution" required><br>
             <input type="date" name="startDate" placeholder="Start Date" required><br>
             <input type="date" name="endDate" placeholder="End Date" required><br>
+
+            <h3>Experience</h3>
             <input type="text" name="company_name" placeholder="Company Name" required><br>
             <input type="text" name="role" placeholder="Role" required><br>
             <input type="date" name="experience_start_date" placeholder="Experience Start Date" required><br>
             <input type="date" name="experience_end_date" placeholder="Experience End Date" required><br>
             <textarea name="description" placeholder="Experience Description" required></textarea><br>
+            
+            <h3>Skills</h3>
             <input type="text" name="skills" placeholder="Skills (format: skill:proficiency_level, ...)" required><br>
+            
+            <h3>LinkedIn</h3>
             <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
+            
+            <h3>Job Description</h3>
             <textarea name="jobDescription" placeholder="Job Description" required></textarea><br>
             
+            <h3>Certificates</h3>
             <div id="certificates-container">
-                <h3>Certificates</h3>
                 <div>
                     <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
                     <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
