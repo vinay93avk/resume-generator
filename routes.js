@@ -125,6 +125,7 @@ function parseSkills(skills) {
     });
 }
 
+// Function to handle splitting certificates
 function parseCertificates(certificateNames, issuingOrganizations, issueDates, expirationDates) {
     const certificates = [];
     for (let i = 0; i < certificateNames.length; i++) {
@@ -137,7 +138,6 @@ function parseCertificates(certificateNames, issuingOrganizations, issueDates, e
     }
     return certificates;
 }
-
 
 // Modify the /generate_resume route
 router.post('/generate_resume', async (req, res) => {
@@ -172,25 +172,22 @@ router.post('/generate_resume', async (req, res) => {
 
         const user = req.session.user;
 
-        // Insert Education details
         const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-        const educationValues = [user.id, degree[0], institution[0], startDate[0], endDate[0], email];
+        const educationValues = [user.id, degree, institution, startDate, endDate, email];
         connection.query(insertEducationQuery, educationValues, (error, results) => {
             if (error) {
                 console.error('Error saving education:', error);
                 return res.status(500).send('Error saving education');
             }
 
-            // Insert Experience details
             const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-            const experienceValues = [user.id, company_name[0], role[0], experience_start_date[0], experience_end_date[0], experiencePoints.join(' '), email];
+            const experienceValues = [user.id, company_name, role, experience_start_date, experience_end_date, experiencePoints.join(' '), email];
             connection.query(insertExperienceQuery, experienceValues, (error, results) => {
                 if (error) {
                     console.error('Error saving experience:', error);
                     return res.status(500).send('Error saving experience');
                 }
 
-                // Insert Skills
                 const parsedSkills = parseSkills(skills);
                 const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
                 parsedSkills.forEach(skill => {
@@ -203,7 +200,6 @@ router.post('/generate_resume', async (req, res) => {
                     });
                 });
 
-                // Insert Certificates
                 const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
                 const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
                 parsedCertificates.forEach(cert => {
@@ -216,7 +212,7 @@ router.post('/generate_resume', async (req, res) => {
                     });
                 });
 
-                const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, degree, institution, start_date, end_date, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
                 const resumeValues = [user.id, firstName, lastName, email, phone, degree, institution, startDate, endDate, experiencePoints.join(' '), skills, linkedUrl];
                 connection.query(insertResumeQuery, resumeValues, (error, results) => {
                     if (error) {
@@ -229,16 +225,16 @@ router.post('/generate_resume', async (req, res) => {
                         email,
                         phone,
                         education: [{
-                            degree: degree[0],
-                            institution: institution[0],
-                            startDate: startDate[0],
-                            endDate: endDate[0]
+                            degree,
+                            institution,
+                            startDate,
+                            endDate
                         }],
                         experience: [{
-                            company_name: company_name[0],
-                            role: role[0],
-                            experience_start_date: experience_start_date[0],
-                            experience_end_date: experience_end_date[0],
+                            company_name,
+                            role,
+                            experience_start_date,
+                            experience_end_date,
                             description: experiencePoints
                         }],
                         skills: parsedSkills,
