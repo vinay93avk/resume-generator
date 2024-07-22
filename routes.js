@@ -188,7 +188,7 @@ router.post('/generate_resume', async (req, res) => {
     // Function to generate experience points for each experience
     const generateExperiencePoints = async (exp, jobDescription, skills) => {
         const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
-        
+
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: 'gpt-4',
             messages: [
@@ -288,7 +288,7 @@ router.post('/generate_resume', async (req, res) => {
                 education: parsedEducation,
                 experience: parsedExperience.map(exp => ({
                     ...exp,
-                    description: exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) // Split description back into array
+                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
                 })),
                 skills: parsedSkills,
                 linkedUrl,
