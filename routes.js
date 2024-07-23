@@ -307,7 +307,7 @@ connection.query(insertResumeQuery, resumeValues, (error, results) => {
             const pdfData = Buffer.concat(buffers);
 
             const s3Params = {
-                Bucket: process.env.S3_BUCKET,
+                Bucket: resume-generator-ocu,
                 Key: `resumes/${user.id}-${Date.now()}.pdf`,
                 Body: pdfData,
                 ContentType: 'application/pdf'
