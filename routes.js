@@ -431,30 +431,23 @@ router.get('/user/:email/experience', (req, res) => {
     const query = `
         SELECT degree FROM Education e
         JOIN users u ON e.user_id = u.id
-        WHERE u.email = ?
-        AND e.end_date = (
-            SELECT MAX(end_date) FROM Education e2
-            WHERE e2.user_id = e.user_id
-        )
-        GROUP BY e.degree, e.end_date
-        ORDER BY e.end_date DESC;
+        WHERE u.email = ?;
     `;
-  
+
     connection.query(query, [email], (error, results) => {
         if (error) {
             console.error('Error querying the database:', error);
             return res.status(500).send('Error querying the database');
         }
-  
+
         if (results.length === 0) {
             return res.status(404).send('No degree found for the given email');
         }
-  
+
         const degrees = results.map(row => row.degree);
         res.json({ degrees });
     });
 });
-
 
   
 router.get('/user/:email/education/institutions', (req, res) => {
@@ -462,29 +455,24 @@ router.get('/user/:email/education/institutions', (req, res) => {
     const query = `
         SELECT institution FROM Education e
         JOIN users u ON e.user_id = u.id
-        WHERE u.email = ?
-        AND e.end_date = (
-            SELECT MAX(end_date) FROM Education e2
-            WHERE e2.user_id = e.user_id
-        )
-        GROUP BY e.institution, e.end_date
-        ORDER BY e.end_date DESC;
+        WHERE u.email = ?;
     `;
-  
+
     connection.query(query, [email], (error, results) => {
         if (error) {
             console.error('Error querying the database:', error);
             return res.status(500).send('Error querying the database');
         }
-  
+
         if (results.length === 0) {
             return res.status(404).send('No institution found for the given email');
         }
-  
+
         const institutions = results.map(row => row.institution);
         res.json({ institutions });
     });
 });
+
 
   
 router.get('/user/:email/education/start_dates', (req, res) => {
@@ -492,29 +480,24 @@ router.get('/user/:email/education/start_dates', (req, res) => {
     const query = `
         SELECT DATE_FORMAT(start_date, "%Y-%m-%d") AS start_date FROM Education e
         JOIN users u ON e.user_id = u.id
-        WHERE u.email = ?
-        AND e.end_date = (
-            SELECT MAX(end_date) FROM Education e2
-            WHERE e2.user_id = e.user_id
-        )
-        GROUP BY e.start_date, e.end_date
-        ORDER BY e.end_date DESC;
+        WHERE u.email = ?;
     `;
-  
+
     connection.query(query, [email], (error, results) => {
         if (error) {
             console.error('Error querying the database:', error);
             return res.status(500).send('Error querying the database');
         }
-  
+
         if (results.length === 0) {
             return res.status(404).send('No start date found for the given email');
         }
-  
+
         const start_dates = results.map(row => row.start_date);
         res.json({ start_dates });
     });
 });
+
 
 
   
@@ -523,25 +506,19 @@ router.get('/user/:email/education/end_dates', (req, res) => {
     const query = `
         SELECT DATE_FORMAT(end_date, "%Y-%m-%d") AS end_date FROM Education e
         JOIN users u ON e.user_id = u.id
-        WHERE u.email = ?
-        AND e.end_date = (
-            SELECT MAX(end_date) FROM Education e2
-            WHERE e2.user_id = e.user_id
-        )
-        GROUP BY e.end_date
-        ORDER BY e.end_date DESC;
+        WHERE u.email = ?;
     `;
-  
+
     connection.query(query, [email], (error, results) => {
         if (error) {
             console.error('Error querying the database:', error);
             return res.status(500).send('Error querying the database');
         }
-  
+
         if (results.length === 0) {
             return res.status(404).send('No end date found for the given email');
         }
-  
+
         const end_dates = results.map(row => row.end_date);
         res.json({ end_dates });
     });
