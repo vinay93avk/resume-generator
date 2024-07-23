@@ -20,22 +20,18 @@
         </div>
     </header>
     <div class="container">
-        <h1>Resume for <%= firstName %> <%= lastName %></h1>
+        <h1><%= firstName %> <%= lastName %></h1>
         <p>Email: <%= email %></p>
         <p>Phone: <%= phone %></p>
         <h2>Education</h2>
         <% education.forEach(function(edu) { %>
-            <p>Degree: <%= edu.degree %></p>
-            <p>Institution: <%= edu.institution %></p>
-            <p>Start Date: <%= edu.start_date %></p>
-            <p>End Date: <%= edu.end_date %></p>
+            <p><strong><%= edu.institution %></strong></p>
+            <p><%= edu.start_date %> - <%= edu.end_date %></p>
+            <p><%= edu.degree %></p>
         <% }); %>
         <h2>Experience</h2>
         <% experience.forEach(function(exp) { %>
-            <p>Company Name: <%= exp.company_name %></p>
-            <p>Role: <%= exp.role %></p>
-            <p>Experience Start Date: <%= exp.start_date %></p>
-            <p>Experience End Date: <%= exp.end_date %></p>
+            <p><strong><%= exp.role %>, <%= exp.company_name %></strong> | <%= exp.start_date %> - <%= exp.end_date %></p>
             <ul>
                 <% (typeof exp.description === 'string' ? exp.description.split('; ') : exp.description).forEach(function(point) { %>
                     <li><%= point %></li>
@@ -64,4 +60,3 @@
     </div>
 </body>
 </html>
-
