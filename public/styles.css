@@ -1,8 +1,4 @@
-/* Ensure the resume fits an A4 size page */
-@page {
-    size: A4;
-    margin: 20mm;
-}
+/* styles.css */
 
 body {
     font-family: Arial, sans-serif;
@@ -65,29 +61,11 @@ h1, h2, h3 {
 }
 
 h2 {
-    margin-bottom: 10px;
+    margin-bottom: 20px;
 }
 
 h3 {
-    margin-top: 20px;
-}
-
-p {
-    margin: 5px 0;
-}
-
-ul {
-    padding-left: 20px;
-}
-
-ul li {
-    margin: 5px 0;
-}
-
-section {
-    border-bottom: 1px solid #5ab1f5; /* Light blue section separator */
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+    margin-top: 40px;
 }
 
 form input[type="text"],
@@ -118,4 +96,10 @@ form input[type="submit"]:hover {
 
 .required-indicator {
     color: red;
+}
+
+section {
+    border-bottom: 1px solid #5ab1f5; /* Light blue section separator */
+    padding-bottom: 10px;
+    margin-bottom: 20px;
 }
