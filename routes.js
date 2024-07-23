@@ -317,15 +317,17 @@ router.post('/generate_resume', async (req, res) => {
               Bucket: 'resume-generator-ocu',
               Key: `resumes/${user.id}-${Date.now()}.pdf`,
               Body: pdfBuffer,
-              ContentType: 'application/pdf'
+              ContentType: 'application/pdf',
+              ACL: 'public-read'  // Add this line
             };
+            
   
             s3.upload(s3Params, (s3Err, data) => {
               if (s3Err) {
                 console.error('Error uploading PDF to S3:', s3Err);
                 return res.status(500).send('Error uploading PDF to S3');
               }
-  
+            
               // Update the resumes table with the S3 URL
               const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
               connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
@@ -333,7 +335,6 @@ router.post('/generate_resume', async (req, res) => {
                   console.error('Error updating resume with S3 URL:', updateErr);
                   return res.status(500).send('Error updating resume with S3 URL');
                 }
-  
                 // Render the resume on the dashboard
                 res.render('generated_resume', {
                   firstName,
@@ -351,7 +352,7 @@ router.post('/generate_resume', async (req, res) => {
                   downloadUrl: data.Location
                 });
               });
-            });
+            });            
           } catch (error) {
             console.error('Error generating PDF:', error);
             res.status(500).send('Error generating PDF');
