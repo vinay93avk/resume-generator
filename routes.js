@@ -3,14 +3,10 @@ const router = express.Router();
 const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
-const AWS = require('aws-sdk');
-const pdf = require('html-pdf');
-const ejs = require('ejs');
-const fs = require('fs');
 const path = require('path');
-
-AWS.config.update({ region: 'us-west-2' });
-const s3 = new AWS.S3();
+const ejs = require('ejs');
+const pdf = require('html-pdf');
+const AWS = require('aws-sdk');
 const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -19,6 +15,7 @@ const dbConfig = {
 };
 
 const connection = mysql.createConnection(dbConfig);
+const s3 = new AWS.S3();
 
 router.get('/', (req, res) => {
   res.render('index');
@@ -88,22 +85,7 @@ router.post('/login', async (req, res) => {
         console.error('Error inserting session:', sessionError);
         return res.status(500).send('Error inserting session');
       }
-
-      // Check if resume exists
-      const resumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-      connection.query(resumeQuery, [user.id], (error, results) => {
-        if (error) {
-          console.error('Error fetching resume URL:', error);
-          return res.status(500).send('Error fetching resume URL');
-        }
-
-        if (results.length > 0) {
-          const s3Url = results[0].s3_url;
-          res.render('dashboard', { user: req.session.user, pdfUrl: s3Url });
-        } else {
-          res.redirect('/resume');
-        }
-      });
+      res.redirect('/resume');
     });
   });
 });
@@ -138,103 +120,119 @@ router.get('/resume', (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
-  res.render('resume', { user: req.session.user });
+
+  const userId = req.session.user.id;
+
+  const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error('Error fetching resume URL:', error);
+      return res.status(500).send('Error fetching resume URL');
+    }
+
+    if (results.length === 0 || !results[0].s3_url) {
+      return res.render('resume', { user: req.session.user });
+    }
+
+    const pdfUrl = results[0].s3_url;
+    res.render('dashboard', { user: req.session.user, pdfUrl });
+  });
 });
 
 // Function to handle splitting skills
 function parseSkills(skills) {
-  return skills.split(',').map(skill => {
-    const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
-    return { skill_name, proficiency_level };
-  });
+    return skills.split(',').map(skill => {
+        const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
+        return { skill_name, proficiency_level };
+    });
 }
 
 // Function to handle splitting certificates
 function parseCertificates(certificateNames, issuingOrganizations, issueDates, expirationDates) {
-  const certificates = [];
-  for (let i = 0; i < certificateNames.length; i++) {
-    certificates.push({
-      certificate_name: certificateNames[i],
-      issuing_organization: issuingOrganizations[i],
-      issue_date: issueDates[i],
-      expiration_date: expirationDates[i]
-    });
-  }
-  return certificates;
+    const certificates = [];
+    for (let i = 0; i < certificateNames.length; i++) {
+        certificates.push({
+            certificate_name: certificateNames[i],
+            issuing_organization: issuingOrganizations[i],
+            issue_date: issueDates[i],
+            expiration_date: expirationDates[i]
+        });
+    }
+    return certificates;
 }
 
 // Function to handle splitting education
 function parseEducation(degrees, institutions, startDates, endDates) {
-  const education = [];
-  for (let i = 0; i < degrees.length; i++) {
-    education.push({
-      degree: degrees[i],
-      institution: institutions[i],
-      start_date: startDates[i],
-      end_date: endDates[i]
-    });
-  }
-  return education;
+    const education = [];
+    for (let i = 0; i < degrees.length; i++) {
+        education.push({
+            degree: degrees[i],
+            institution: institutions[i],
+            start_date: startDates[i],
+            end_date: endDates[i]
+        });
+    }
+    return education;
 }
 
 // Function to handle splitting experience
 function parseExperience(companyNames, roles, startDates, endDates, descriptions) {
-  const experience = [];
-  for (let i = 0; i < companyNames.length; i++) {
-    experience.push({
-      company_name: companyNames[i],
-      role: roles[i],
-      start_date: startDates[i],
-      end_date: endDates[i],
-      description: descriptions[i]
-    });
-  }
-  return experience;
+    const experience = [];
+    for (let i = 0; i < companyNames.length; i++) {
+        experience.push({
+            company_name: companyNames[i],
+            role: roles[i],
+            start_date: startDates[i],
+            end_date: endDates[i],
+            description: descriptions[i]
+        });
+    }
+    return experience;
 }
 
 router.post('/generate_resume', async (req, res) => {
-  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
-  const { firstName, lastName, email, phone } = req.session.user;
+    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
+    const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
-    return res.status(400).send('All fields are required');
-  }
+    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
+        return res.status(400).send('All fields are required');
+    }
 
-  const user = req.session.user;
+    const user = req.session.user;
 
-  // Parsing Education, Experience, Skills, and Certificates
-  const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-  const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-  const parsedSkills = parseSkills(skills);
-  const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+    // Parsing Education, Experience, Skills, and Certificates
+    const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+    const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+    const parsedSkills = parseSkills(skills);
+    const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
 
-  // Function to generate experience points for each experience
-  const generateExperiencePoints = async (exp, jobDescription, skills) => {
-    const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+    // Function to generate experience points for each experience
+    const generateExperiencePoints = async (exp, jobDescription, skills) => {
+        const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
 
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt }
-      ]
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: 'gpt-4',
+            messages: [
+                { role: 'system', content: 'You are a helpful assistant.' },
+                { role: 'user', content: prompt }
+            ]
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-    const experienceDescription = response.data.choices[0].message.content.trim();
-    const experiencePoints = experienceDescription
-      .split('\n')
-      .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
-      .filter(line => line.trim() !== '.');
+        const experienceDescription = response.data.choices[0].message.content.trim();
+const experiencePoints = experienceDescription
+    .split('\n')
+    .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
+    .filter(line => line.trim() !== '.');
 
-    return experiencePoints; // Return the array of points
-  };
+return experiencePoints; // Return the array of points
+};
 
-  try {
+try {
     // Generate experience points for each experience entry
     const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
 
@@ -287,54 +285,62 @@ router.post('/generate_resume', async (req, res) => {
     const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
     const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
 
-    // Render the resume using EJS template
-    const resumeHtml = await ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
-        firstName,
-        lastName,
-        email,
-        phone,
-        education: parsedEducation,
-        experience: parsedExperience.map(exp => ({
-            ...exp,
-            description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-        })),
-        skills: parsedSkills,
-        linkedUrl,
-        certificates: parsedCertificates
-    });
-
-    // Convert HTML to PDF
-    pdf.create(resumeHtml).toBuffer(async (err, buffer) => {
-        if (err) {
-            console.error('Error generating PDF:', err);
-            return res.status(500).send('Error generating PDF');
+    // Insert into resumes table
+    const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl, s3_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl, ''];
+    connection.query(insertResumeQuery, resumeValues, async (error, results) => {
+        if (error) {
+            console.error('Error saving resume:', error);
+            return res.status(500).send('Error saving resume');
         }
 
-        // Save PDF to S3
-        const s3Params = {
-            Bucket: 'resume-generator-ocu',
-            Key: `resumes/${user.id}-${Date.now()}.pdf`,
-            Body: buffer,
-            ContentType: 'application/pdf'
-        };
+        // Render the resume to HTML
+        const resumeHtml = await ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
+            firstName,
+            lastName,
+            email,
+            phone,
+            education: parsedEducation,
+            experience: parsedExperience.map(exp => ({
+                ...exp,
+                description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
+            })),
+            skills: parsedSkills,
+            linkedUrl,
+            certificates: parsedCertificates
+        });
 
-        s3.upload(s3Params, (s3Err, data) => {
-            if (s3Err) {
-                console.error('Error uploading PDF to S3:', s3Err);
-                return res.status(500).send('Error uploading PDF to S3');
+        // Convert the HTML to PDF
+        pdf.create(resumeHtml).toBuffer(async (err, buffer) => {
+            if (err) {
+                console.error('Error creating PDF:', err);
+                return res.status(500).send('Error creating PDF');
             }
 
-            const s3Url = data.Location;
+            // Upload the PDF to S3
+            const s3Params = {
+                Bucket: process.env.S3_BUCKET,
+                Key: `resumes/${user.id}-${Date.now()}.pdf`,
+                Body: buffer,
+                ContentType: 'application/pdf'
+            };
 
-            // Inserting into resumes table
-            const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl, s3_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl, s3Url];
-            connection.query(insertResumeQuery, resumeValues, (error, results) => {
-                if (error) {
-                    console.error('Error saving resume:', error);
-                    return res.status(500).send('Error saving resume');
+            s3.upload(s3Params, (s3Err, data) => {
+                if (s3Err) {
+                    console.error('Error uploading PDF to S3:', s3Err);
+                    return res.status(500).send('Error uploading PDF to S3');
                 }
-                res.redirect('/dashboard');
+
+                // Update the resumes table with the S3 URL
+                const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                connection.query(updateResumeQuery, [data.Location, results.insertId], (updateErr) => {
+                    if (updateErr) {
+                        console.error('Error updating resume with S3 URL:', updateErr);
+                        return res.status(500).send('Error updating resume with S3 URL');
+                    }
+
+                    res.redirect('/dashboard');
+                });
             });
         });
     });
@@ -342,7 +348,7 @@ router.post('/generate_resume', async (req, res) => {
     console.error('Error generating description:', error);
     res.status(500).send('Error generating description');
 }
-});  
+});
   
   router.get('/dashboard', (req, res) => {
     if (!req.session.user) {
