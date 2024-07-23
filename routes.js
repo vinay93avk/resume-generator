@@ -4,7 +4,6 @@ const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const pdfkit = require('pdfkit');
-const blobStream = require('blob-stream');
 const AWS = require('aws-sdk');
 const ejs = require('ejs');
 const path = require('path');
@@ -127,223 +126,222 @@ router.get('/resume', (req, res) => {
 
 // Function to handle splitting skills
 function parseSkills(skills) {
-    return skills.split(',').map(skill => {
-        const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
-        return { skill_name, proficiency_level };
-    });
+  return skills.split(',').map(skill => {
+    const [skill_name, proficiency_level] = skill.split(':').map(s => s.trim());
+    return { skill_name, proficiency_level };
+  });
 }
 
 // Function to handle splitting certificates
 function parseCertificates(certificateNames, issuingOrganizations, issueDates, expirationDates) {
-    const certificates = [];
-    for (let i = 0; i < certificateNames.length; i++) {
-        certificates.push({
-            certificate_name: certificateNames[i],
-            issuing_organization: issuingOrganizations[i],
-            issue_date: issueDates[i],
-            expiration_date: expirationDates[i]
-        });
-    }
-    return certificates;
+  const certificates = [];
+  for (let i = 0; i < certificateNames.length; i++) {
+    certificates.push({
+      certificate_name: certificateNames[i],
+      issuing_organization: issuingOrganizations[i],
+      issue_date: issueDates[i],
+      expiration_date: expirationDates[i]
+    });
+  }
+  return certificates;
 }
 
 // Function to handle splitting education
 function parseEducation(degrees, institutions, startDates, endDates) {
-    const education = [];
-    for (let i = 0; i < degrees.length; i++) {
-        education.push({
-            degree: degrees[i],
-            institution: institutions[i],
-            start_date: startDates[i],
-            end_date: endDates[i]
-        });
-    }
-    return education;
+  const education = [];
+  for (let i = 0; i < degrees.length; i++) {
+    education.push({
+      degree: degrees[i],
+      institution: institutions[i],
+      start_date: startDates[i],
+      end_date: endDates[i]
+    });
+  }
+  return education;
 }
 
 // Function to handle splitting experience
 function parseExperience(companyNames, roles, startDates, endDates, descriptions) {
-    const experience = [];
-    for (let i = 0; i < companyNames.length; i++) {
-        experience.push({
-            company_name: companyNames[i],
-            role: roles[i],
-            start_date: startDates[i],
-            end_date: endDates[i],
-            description: descriptions[i]
-        });
-    }
-    return experience;
+  const experience = [];
+  for (let i = 0; i < companyNames.length; i++) {
+    experience.push({
+      company_name: companyNames[i],
+      role: roles[i],
+      start_date: startDates[i],
+      end_date: endDates[i],
+      description: descriptions[i]
+    });
+  }
+  return experience;
 }
 
 router.post('/generate_resume', async (req, res) => {
-    const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
-    const { firstName, lastName, email, phone } = req.session.user;
+  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
+  const { firstName, lastName, email, phone } = req.session.user;
 
-    if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
-        return res.status(400).send('All fields are required');
+  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
+    return res.status(400).send('All fields are required');
+  }
+
+  const user = req.session.user;
+
+  // Parsing Education, Experience, Skills, and Certificates
+  const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+  const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+  const parsedSkills = parseSkills(skills);
+  const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+
+  // Function to generate experience points for each experience
+  const generateExperiencePoints = async (exp, jobDescription, skills) => {
+    const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: prompt }
+      ]
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const experienceDescription = response.data.choices[0].message.content.trim();
+    const experiencePoints = experienceDescription
+      .split('\n')
+      .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
+      .filter(line => line.trim() !== '.');
+
+    return experiencePoints; // Return the array of points
+  };
+
+  try {
+    // Generate experience points for each experience entry
+    const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
+
+    // Add generated experience points to each experience entry
+    parsedExperience.forEach((exp, index) => {
+      exp.description = experiencePointsArray[index].join('; '); // Ensure it's a string
+    });
+
+    // Inserting Education
+    const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
+    const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
+    connection.query(insertEducationQuery, [educationValues], (error, results) => {
+      if (error) {
+        console.error('Error saving education:', error);
+        return res.status(500).send('Error saving education');
+      }
+    });
+
+    // Inserting Experience
+    const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
+const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
+connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
+    if (error) {
+        console.error('Error saving experience:', error);
+        return res.status(500).send('Error saving experience');
+    }
+});
+
+// Inserting Skills
+const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
+const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
+connection.query(insertSkillsQuery, [skillValues], (error, results) => {
+    if (error) {
+        console.error('Error saving skill:', error);
+        return res.status(500).send('Error saving skill');
+    }
+});
+
+// Inserting Certificates
+const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
+const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
+connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
+    if (error) {
+        console.error('Error saving certificate:', error);
+        return res.status(500).send('Error saving certificate');
+    }
+});
+
+// Create combined descriptions for education and experience
+const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
+const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
+
+// Inserting into resumes table
+const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
+connection.query(insertResumeQuery, resumeValues, (error, results) => {
+    if (error) {
+        console.error('Error saving resume:', error);
+        return res.status(500).send('Error saving resume');
     }
 
-    const user = req.session.user;
+    // Render the resume to HTML
+    ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
+        firstName,
+        lastName,
+        email,
+        phone,
+        education: parsedEducation,
+        experience: parsedExperience.map(exp => ({
+            ...exp,
+            description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
+        })),
+        skills: parsedSkills,
+        linkedUrl,
+        certificates: parsedCertificates
+    }, (err, html) => {
+        if (err) {
+            console.error('Error rendering resume HTML:', err);
+            return res.status(500).send('Error rendering resume HTML');
+        }
 
-    // Parsing Education, Experience, Skills, and Certificates
-    const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-    const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-    const parsedSkills = parseSkills(skills);
-    const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+        // Create a PDF document
+        const doc = new pdfkit();
+        const stream = doc.pipe(blobStream());
 
-    // Function to generate experience points for each experience
-    const generateExperiencePoints = async (exp, jobDescription, skills) => {
-        const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
+        // Add HTML content to the PDF
+        doc.text(html);
 
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: 'gpt-4',
-            messages: [
-                { role: 'system', content: 'You are a helpful assistant.' },
-                { role: 'user', content: prompt }
-            ]
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Finalize the PDF and end the stream
+        doc.end();
 
-        const experienceDescription = response.data.choices[0].message.content.trim();
-        const experiencePoints = experienceDescription
-            .split('\n')
-            .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
-            .filter(line => line.trim() !== '.');
+        stream.on('finish', () => {
+            const buffer = stream.read(); // Use stream.read() to get the buffer
+            const s3Params = {
+                Bucket: process.env.S3_BUCKET,
+                Key: `resumes/${user.id}-${Date.now()}.pdf`,
+                Body: buffer,
+                ContentType: 'application/pdf'
+            };
 
-        return experiencePoints; // Return the array of points
-    };
-
-    try {
-        // Generate experience points for each experience entry
-        const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
-
-        // Add generated experience points to each experience entry
-        parsedExperience.forEach((exp, index) => {
-            exp.description = experiencePointsArray[index].join('; '); // Ensure it's a string
-        });
-
-        // Inserting Education
-        const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
-        const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
-        connection.query(insertEducationQuery, [educationValues], (error, results) => {
-            if (error) {
-                console.error('Error saving education:', error);
-                return res.status(500).send('Error saving education');
-            }
-        });
-
-        // Inserting Experience
-        const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
-        const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
-        connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
-            if (error) {
-                console.error('Error saving experience:', error);
-                return res.status(500).send('Error saving experience');
-            }
-        });
-
-        // Inserting Skills
-        const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
-        const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
-        connection.query(insertSkillsQuery, [skillValues], (error, results) => {
-            if (error) {
-                console.error('Error saving skill:', error);
-                return res.status(500).send('Error saving skill');
-            }
-        });
-
-        // Inserting Certificates
-        const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
-        const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
-        connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
-            if (error) {
-                console.error('Error saving certificate:', error);
-                return res.status(500).send('Error saving certificate');
-            }
-        });
-
-        // Create combined descriptions for education and experience
-        const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
-        const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
-
-        // Inserting into resumes table
-        const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
-        connection.query(insertResumeQuery, resumeValues, (error, results) => {
-            if (error) {
-                console.error('Error saving resume:', error);
-                return res.status(500).send('Error saving resume');
-            }
-
-            // Render the resume to HTML
-            ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
-                firstName,
-                lastName,
-                email,
-                phone,
-                education: parsedEducation,
-                experience: parsedExperience.map(exp => ({
-                    ...exp,
-                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-                })),
-                skills: parsedSkills,
-                linkedUrl,
-                certificates: parsedCertificates
-            }, (err, html) => {
-                if (err) {
-                    console.error('Error rendering resume HTML:', err);
-                    return res.status(500).send('Error rendering resume HTML');
+            s3.upload(s3Params, (s3Err, data) => {
+                if (s3Err) {
+                    console.error('Error uploading PDF to S3:', s3Err);
+                    return res.status(500).send('Error uploading PDF to S3');
                 }
 
-                // Create a PDF document
-                const doc = new pdfkit();
-                const stream = doc.pipe(blobStream());
+                // Update the resumes table with the S3 URL
+                const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                connection.query(updateResumeQuery, [data.Location, results.insertId], (updateErr) => {
+                    if (updateErr) {
+                        console.error('Error updating resume with S3 URL:', updateErr);
+                        return res.status(500).send('Error updating resume with S3 URL');
+                    }
 
-                // Add HTML content to the PDF
-                doc.text(html);
-
-                // Finalize the PDF and end the stream
-                doc.end();
-
-                // Upload the PDF to S3
-                stream.on('finish', () => {
-                    const buffer = stream.toBuffer();
-                    const s3Params = {
-                        Bucket: process.env.S3_BUCKET,
-                        Key: `resumes/${user.id}-${Date.now()}.pdf`,
-                        Body: buffer,
-                        ContentType: 'application/pdf'
-                    };
-
-                    s3.upload(s3Params, (s3Err, data) => {
-                        if (s3Err) {
-                            console.error('Error uploading PDF to S3:', s3Err);
-                            return res.status(500).send('Error uploading PDF to S3');
-                        }
-
-                        // Update the resumes table with the S3 URL
-                        const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
-                        connection.query(updateResumeQuery, [data.Location, results.insertId], (updateErr) => {
-                            if (updateErr) {
-                                console.error('Error updating resume with S3 URL:', updateErr);
-                                return res.status(500).send('Error updating resume with S3 URL');
-                            }
-
-                            res.redirect('/dashboard');
-                        });
-                    });
+                    res.redirect('/dashboard');
                 });
             });
         });
-    } catch (error) {
-        console.error('Error generating description:', error);
-        res.status(500).send('Error generating description');
-    }
+    });
+  });
+} catch (error) {
+    console.error('Error generating description:', error);
+    res.status(500).send('Error generating description');
+}
 });
 
 router.get('/download_resume', async (req, res) => {
@@ -368,6 +366,7 @@ router.get('/download_resume', async (req, res) => {
         res.redirect(pdfUrl); // Redirect the user to the S3 URL for downloading
     });
 });
+
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
