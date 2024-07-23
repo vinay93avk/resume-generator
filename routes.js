@@ -295,13 +295,14 @@ router.post('/generate_resume', async (req, res) => {
         })),
         skills: parsedSkills,
         linkedUrl,
-        certificates: parsedCertificates
+        certificates: parsedCertificates,
+        pdf: true  // Indicate that this is for PDF generation
       }, async (err, html) => {
         if (err) {
           console.error('Error rendering resume HTML:', err);
           return res.status(500).send('Error rendering resume HTML');
         }
-
+    
         try {
           // Generate PDF from HTML
           const browser = await puppeteer.launch({
@@ -309,14 +310,14 @@ router.post('/generate_resume', async (req, res) => {
           });
           const page = await browser.newPage();
           await page.setContent(html, { waitUntil: 'networkidle0' });
-
+    
           // Add stylesheets to the page
           await page.addStyleTag({ path: path.join(__dirname, 'public', 'styles.css') });
           await page.addStyleTag({ path: path.join(__dirname, 'public', 'resume_styles.css') });
-
+    
           const pdfBuffer = await page.pdf({ format: 'A4' });
           await browser.close();
-
+    
           // Upload PDF to S3
           const s3Params = {
             Bucket: 'resume-generator-ocu',
@@ -324,13 +325,13 @@ router.post('/generate_resume', async (req, res) => {
             Body: pdfBuffer,
             ContentType: 'application/pdf'
           };
-
+    
           s3.upload(s3Params, (s3Err, data) => {
             if (s3Err) {
               console.error('Error uploading PDF to S3:', s3Err);
               return res.status(500).send('Error uploading PDF to S3');
             }
-
+    
             // Update the resumes table with the S3 URL
             const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
             connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
@@ -338,7 +339,7 @@ router.post('/generate_resume', async (req, res) => {
                 console.error('Error updating resume with S3 URL:', updateErr);
                 return res.status(500).send('Error updating resume with S3 URL');
               }
-
+    
               // Render the resume on the dashboard
               res.render('generated_resume', {
                 firstName,
@@ -363,11 +364,6 @@ router.post('/generate_resume', async (req, res) => {
         }
       });
     });
-  } catch (error) {
-    console.error('Error generating description:', error);
-    res.status(500).send('Error generating description');
-  }
-});
 
   
   router.get('/download_resume', async (req, res) => {

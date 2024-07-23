@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/resume_styles.css">
 </head>
 <body>
+    <% if (!pdf) { %>
     <header>
         <div class="container">
             <div id="branding">
@@ -20,6 +21,7 @@
             </nav>
         </div>
     </header>
+    <% } %>
     <div class="resume-container">
         <h1><%= firstName %> <%= lastName %></h1>
         <p><%= phone %> | <%= email %> | <a href="<%= linkedUrl %>" target="_blank"><%= linkedUrl %></a></p>
@@ -52,7 +54,9 @@
                 </li>
             <% }); %>
         </ul>
+        <% if (!pdf) { %>
         <a href="/download_resume" class="download-btn">Download PDF</a>
+        <% } %>
     </div>
 </body>
 </html>
