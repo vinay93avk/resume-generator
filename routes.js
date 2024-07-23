@@ -3,10 +3,12 @@ const router = express.Router();
 const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
-const path = require('path');
+const pdfkit = require('pdfkit');
+const blobStream = require('blob-stream');
+const AWS = require('aws-sdk');
 const ejs = require('ejs');
-const pdf = require('html-pdf');
-const fs = require('fs');
+const path = require('path');
+
 const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -15,6 +17,7 @@ const dbConfig = {
 };
 
 const connection = mysql.createConnection(dbConfig);
+const s3 = new AWS.S3();
 
 router.get('/', (req, res) => {
   res.render('index');
@@ -233,7 +236,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving education');
             }
         });
-        
+
         // Inserting Experience
         const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
         const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
@@ -243,7 +246,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving experience');
             }
         });
-        
+
         // Inserting Skills
         const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
         const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
@@ -253,7 +256,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving skill');
             }
         });
-        
+
         // Inserting Certificates
         const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
         const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
@@ -263,11 +266,11 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving certificate');
             }
         });
-        
+
         // Create combined descriptions for education and experience
         const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
         const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
-        
+
         // Inserting into resumes table
         const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
@@ -276,97 +279,95 @@ router.post('/generate_resume', async (req, res) => {
                 console.error('Error saving resume:', error);
                 return res.status(500).send('Error saving resume');
             }
-            
-            // Render the resume to HTML
-            ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
-                firstName,
-                lastName,
-                email,
-                phone,
-                education: parsedEducation,
-                experience: parsedExperience.map(exp => ({
-                    ...exp,
-                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-                })),
-                skills: parsedSkills,
-                linkedUrl,
-                certificates: parsedCertificates
-            }, (err, html) => {
-                if (err) {
-                    console.error('Error rendering EJS to HTML:', err);
-                    return res.status(500).send('Error generating resume');
-                }
-        
-                // Convert the HTML to PDF
-                pdf.create(html).toBuffer((err, buffer) => {
-                    if (err) {
-                        console.error('Error creating PDF:', err);
-                        return res.status(500).send('Error creating PDF');
-                    }
-        
-                    // Serve the PDF for download
-                    res.setHeader('Content-Disposition', `attachment; filename="${firstName}_${lastName}_Resume.pdf"`);
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.send(buffer);
-                });
-            });
-        });
-        } catch (error) {
-            console.error('Error generating description:', error);
-            res.status(500).send('Error generating description');
-        }
-        });
-        
-        router.get('/download_resume', (req, res) => {
-            if (!req.session.user) {
-                return res.redirect('/login'); // Redirect to login if the user is not logged in
-            }
-        
-            const { firstName, lastName, email, phone } = req.session.user;
-            const user = req.session.user;
-        
-            // Parsing Education, Experience, Skills, and Certificates
-            const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-            const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-            const parsedSkills = parseSkills(skills);
-            const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
-        
-            // Render the resume to HTML
-            ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
-                firstName,
-                lastName,
-                email,
-                phone,
-                education: parsedEducation,
-                experience: parsedExperience.map(exp => ({
-                    ...exp,
-                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-                })),
-                skills: parsedSkills,
-                linkedUrl,
-                certificates: parsedCertificates
-            }, (err, html) => {
-                if (err) {
-                    console.error('Error rendering EJS to HTML:', err);
-                    return res.status(500).send('Error generating resume');
-                }
-        
-                // Convert the HTML to PDF
-                pdf.create(html).toBuffer((err, buffer) => {
-                    if (err) {
-                        console.error('Error creating PDF:', err);
-                        return res.status(500).send('Error creating PDF');
-                    }
-        
-                    // Serve the PDF for download
-                    res.setHeader('Content-Disposition', `attachment; filename="${firstName}_${lastName}_Resume.pdf"`);
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.send(buffer);
-                });
-            });
-        });
-        
 
+            // Render the resume to HTML
+            ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
+                firstName,
+                lastName,
+                email,
+                phone,
+                education: parsedEducation,
+                experience: parsedExperience.map(exp => ({
+                    ...exp,
+                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
+                })),
+                skills: parsedSkills,
+                linkedUrl,
+                certificates: parsedCertificates
+            }, (err, html) => {
+                if (err) {
+                    console.error('Error rendering resume HTML:', err);
+                    return res.status(500).send('Error rendering resume HTML');
+                }
+
+                // Create a PDF document
+                const doc = new pdfkit();
+                const stream = doc.pipe(blobStream());
+
+                // Add HTML content to the PDF
+                doc.text(html);
+
+                // Finalize the PDF and end the stream
+                doc.end();
+
+                // Upload the PDF to S3
+                stream.on('finish', () => {
+                    const buffer = stream.toBuffer();
+                    const s3Params = {
+                        Bucket: process.env.S3_BUCKET,
+                        Key: `resumes/${user.id}-${Date.now()}.pdf`,
+                        Body: buffer,
+                        ContentType: 'application/pdf'
+                    };
+
+                    s3.upload(s3Params, (s3Err, data) => {
+                        if (s3Err) {
+                            console.error('Error uploading PDF to S3:', s3Err);
+                            return res.status(500).send('Error uploading PDF to S3');
+                        }
+
+                        // Update the resumes table with the S3 URL
+                        const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                        connection.query(updateResumeQuery, [data.Location, results.insertId], (updateErr) => {
+                            if (updateErr) {
+                                console.error('Error updating resume with S3 URL:', updateErr);
+                                return res.status(500).send('Error updating resume with S3 URL');
+                            }
+
+                            res.redirect('/dashboard');
+                        });
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error generating description:', error);
+        res.status(500).send('Error generating description');
+    }
+});
+
+router.get('/download_resume', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login'); // Redirect to login if the user is not logged in
+    }
+
+    const userId = req.session.user.id;
+
+    const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+    connection.query(query, [userId], (error, results) => {
+        if (error) {
+            console.error('Error fetching resume URL:', error);
+            return res.status(500).send('Error fetching resume URL');
+        }
+
+        if (results.length === 0 || !results[0].s3_url) {
+            return res.status(404).send('No resume found');
+        }
+
+        const pdfUrl = results[0].s3_url;
+        res.redirect(pdfUrl); // Redirect the user to the S3 URL for downloading
+    });
+});
 
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';

@@ -1,60 +1,88 @@
+/* resume_styles.css */
+
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11px;
 }
 
 .resume-container {
-    width: 210mm;
-    height: 297mm;
-    padding: 20mm;
-    box-sizing: border-box;
-    background-color: #fff;
-    margin: auto;
-    border: 1px solid #ddd;
-    page-break-after: always;
-}
-
-h1 {
-    font-size: 24px;
-    color: #35424a;
-}
-
-h2 {
-    font-size: 16px;
+    background: white;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 800px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     font-family: 'Times New Roman', Times, serif;
-    color: #35424a;
-}
-
-p, ul, li {
     font-size: 11px;
-    font-family: 'Times New Roman', Times, serif;
-    color: #000;
-    margin: 5px 0;
 }
 
-strong {
+.resume-container h1, .resume-container h2 {
+    color: #35424a;
+    margin-top: 0;
+}
+
+.resume-container h1 {
     font-family: Arial, sans-serif;
-}
-
-.container, .resume-container {
-    margin: auto;
-    overflow: hidden;
+    font-size: 24px;
 }
 
 .resume-container h2 {
-    margin-bottom: 10px;
+    font-size: 16px;
+    text-transform: uppercase;
 }
 
 .resume-container p {
     margin: 5px 0;
 }
 
-.resume-container ul {
-    list-style-type: disc;
-    margin: 5px 0 15px 20px;
+.resume-container a {
+    color: #5ab1f5;
+    text-decoration: none;
 }
 
-.resume-container li {
-    margin: 0;
+.resume-container .education,
+.resume-container .experience,
+.resume-container .skills,
+.resume-container .certificates {
+    margin-bottom: 20px;
+}
+
+.resume-container .education p,
+.resume-container .experience p,
+.resume-container .skills p,
+.resume-container .certificates p {
+    margin: 5px 0;
+}
+
+.resume-container .education strong,
+.resume-container .experience strong,
+.resume-container .certificates strong {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.resume-container ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+.resume-container ul li {
+    margin-bottom: 5px;
+    font-size: 11px;
+}
+
+.download-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: #35424a;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+}
+
+.download-btn:hover {
+    background: #5ab1f5;
 }
