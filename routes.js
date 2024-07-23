@@ -314,7 +314,7 @@ connection.query(insertResumeQuery, resumeValues, (error, results) => {
         stream.on('finish', () => {
             const buffer = stream.toBlob('application/pdf');
             const s3Params = {
-                Bucket: process.env.S3_BUCKET,
+                Bucket: resume-generator-ocu,
                 Key: `resumes/${user.id}-${Date.now()}.pdf`,
                 Body: buffer,
                 ContentType: 'application/pdf'
