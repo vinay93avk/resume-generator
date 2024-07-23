@@ -1,0 +1,41 @@
+/* resume_styles.css */
+
+@page {
+    size: A4;
+    margin: 20mm;
+}
+
+.resume-container {
+    width: 100%;
+    max-width: 210mm;
+    margin: auto;
+    overflow: hidden;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+    color: #35424a;
+    margin-top: 0;
+}
+
+h2 {
+    margin-bottom: 10px;
+}
+
+h3 {
+    margin-top: 20px;
+}
+
+p {
+    margin: 5px 0;
+}
+
+ul {
+    padding-left: 20px;
+}
+
+ul li {
+    margin: 5px 0;
+}
