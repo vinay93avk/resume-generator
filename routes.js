@@ -3,7 +3,6 @@ const router = express.Router();
 const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
-const pdf = require('html-pdf-node');
 const AWS = require('aws-sdk');
 const ejs = require('ejs');
 const path = require('path');
@@ -298,7 +297,7 @@ router.post('/generate_resume', async (req, res) => {
           console.error('Error rendering resume HTML:', err);
           return res.status(500).send('Error rendering resume HTML');
         }
-
+      
         try {
           const browser = await puppeteer.launch({
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -307,20 +306,20 @@ router.post('/generate_resume', async (req, res) => {
           await page.setContent(html, { waitUntil: 'networkidle0' });
           const pdfBuffer = await page.pdf({ format: 'A4' });
           await browser.close();
-
+      
           const s3Params = {
-            Bucket: resume-generator-ocu,
+            Bucket: 'resume-generator-ocu',
             Key: `resumes/${user.id}-${Date.now()}.pdf`,
             Body: pdfBuffer,
             ContentType: 'application/pdf'
           };
-
+      
           s3.upload(s3Params, (s3Err, data) => {
             if (s3Err) {
               console.error('Error uploading PDF to S3:', s3Err);
               return res.status(500).send('Error uploading PDF to S3');
             }
-
+      
             // Update the resumes table with the S3 URL
             const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
             connection.query(updateResumeQuery, [data.Location, results.insertId], (updateErr) => {
@@ -369,8 +368,7 @@ connection.query(query, [userId], (error, results) => {
 
 
 
-
-router.get('/download_resume', async (req, res) => {
+  router.get('/download_resume', async (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login'); // Redirect to login if the user is not logged in
     }
@@ -392,7 +390,6 @@ router.get('/download_resume', async (req, res) => {
         res.redirect(pdfUrl); // Redirect the user to the S3 URL for downloading
     });
 });
-
 router.get('/user-count', (req, res) => {
   const query = 'SELECT COUNT(*) AS count FROM users';
 
