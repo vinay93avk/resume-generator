@@ -224,7 +224,7 @@ router.post('/generate_resume', async (req, res) => {
         });
 
         const experienceDescription = response.data.choices[0].message.content.trim();
-const experiencePoints = experienceDescription
+        const experiencePoints = experienceDescription
     .split('\n')
     .map(point => point.trim().replace(/^- /, '').replace(/\.$/, '').trim() + '.')
     .filter(line => line.trim() !== '.');
@@ -349,7 +349,6 @@ try {
     res.status(500).send('Error generating description');
 }
 });
-  
   router.get('/dashboard', (req, res) => {
     if (!req.session.user) {
       return res.redirect('/login');
