@@ -1,41 +1,37 @@
-/* resume_styles.css */
-
-@page {
-    size: A4;
-    margin: 20mm;
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
 }
 
 .resume-container {
-    width: 100%;
-    max-width: 210mm;
-    margin: auto;
-    overflow: hidden;
-    background-color: #ffffff;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11pt;
+    width: 210mm;
+    height: 297mm;
+    padding: 20mm;
+    box-sizing: border-box;
+    background: white;
 }
 
-h1, h2, h3 {
+h1 {
     color: #35424a;
-    margin-top: 0;
+    font-size: 24pt;
 }
 
 h2 {
-    margin-bottom: 10px;
+    color: #35424a;
+    font-size: 16pt;
+    font-family: 'Times New Roman', Times, serif;
 }
 
-h3 {
-    margin-top: 20px;
+p, li {
+    font-size: 11pt;
+    font-family: 'Times New Roman', Times, serif;
 }
 
-p {
-    margin: 5px 0;
-}
-
-ul {
-    padding-left: 20px;
-}
-
-ul li {
-    margin: 5px 0;
+strong {
+    font-size: 11pt;
+    font-family: Arial, sans-serif;
 }
