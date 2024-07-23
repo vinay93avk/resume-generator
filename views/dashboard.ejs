@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1>Resume Generator Dashboard</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/logout">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <h2>Welcome, <%= user.firstName %> <%= user.lastName %></h2>
+        <% if (pdfUrl) { %>
+            <h3>Your Latest Resume</h3>
+            <iframe src="<%= pdfUrl %>" width="100%" height="600px"></iframe>
+        <% } else { %>
+            <p>No resume generated yet. Please generate a resume.</p>
+        <% } %>
+        <a href="/resume">Generate New Resume</a>
+    </div>
+</body>
+</html>
