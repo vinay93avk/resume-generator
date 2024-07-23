@@ -1,37 +1,60 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
     margin: 0;
     padding: 0;
 }
 
 .resume-container {
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 11pt;
     width: 210mm;
     height: 297mm;
     padding: 20mm;
     box-sizing: border-box;
-    background: white;
+    background-color: #fff;
+    margin: auto;
+    border: 1px solid #ddd;
+    page-break-after: always;
 }
 
 h1 {
+    font-size: 24px;
     color: #35424a;
-    font-size: 24pt;
 }
 
 h2 {
-    color: #35424a;
-    font-size: 16pt;
+    font-size: 16px;
     font-family: 'Times New Roman', Times, serif;
+    color: #35424a;
 }
 
-p, li {
-    font-size: 11pt;
+p, ul, li {
+    font-size: 11px;
     font-family: 'Times New Roman', Times, serif;
+    color: #000;
+    margin: 5px 0;
 }
 
 strong {
-    font-size: 11pt;
     font-family: Arial, sans-serif;
+}
+
+.container, .resume-container {
+    margin: auto;
+    overflow: hidden;
+}
+
+.resume-container h2 {
+    margin-bottom: 10px;
+}
+
+.resume-container p {
+    margin: 5px 0;
+}
+
+.resume-container ul {
+    list-style-type: disc;
+    margin: 5px 0 15px 20px;
+}
+
+.resume-container li {
+    margin: 0;
 }
