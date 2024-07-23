@@ -21,7 +21,7 @@
     </header>
     <div class="container">
         <h1><%= firstName %> <%= lastName %></h1>
-        <p><%= phone %> | <%= email %> | <a href="<%= linkedUrl %>" target="_blank">LinkedIn</a></p>
+        <p><%= phone %> | <%= email %> | <a href="<%= linkedUrl %>" target="_blank"><%= linkedUrl %></a></p>
         <h2>Education</h2>
         <% education.forEach(function(edu) { %>
             <p><strong><%= edu.institution %></strong> | <%= edu.start_date %> - <%= edu.end_date %><br>
@@ -42,10 +42,6 @@
                 <li><%= skill.skill_name %> - <%= skill.proficiency_level %></li>
             <% }); %>
         </ul>
-        <% if (linkedUrl) { %>
-            <h2>LinkedIn</h2>
-            <p><a href="<%= linkedUrl %>" target="_blank"><%= linkedUrl %></a></p>
-        <% } %>
         <h2>Certificates</h2>
         <ul>
             <% certificates.forEach(function(cert) { %>
