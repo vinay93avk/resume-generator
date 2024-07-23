@@ -221,51 +221,43 @@ router.post('/generate_resume', async (req, res) => {
         });
 
         // Inserting Education
-        parsedEducation.forEach(edu => {
-            const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-            const educationValues = [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email];
-            connection.query(insertEducationQuery, educationValues, (error, results) => {
-                if (error) {
-                    console.error('Error saving education:', error);
-                    return res.status(500).send('Error saving education');
-                }
-            });
+        const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
+        const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
+        connection.query(insertEducationQuery, [educationValues], (error, results) => {
+            if (error) {
+                console.error('Error saving education:', error);
+                return res.status(500).send('Error saving education');
+            }
         });
 
         // Inserting Experience
-        parsedExperience.forEach(exp => {
-            const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-            const experienceValues = [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email];
-            connection.query(insertExperienceQuery, experienceValues, (error, results) => {
-                if (error) {
-                    console.error('Error saving experience:', error);
-                    return res.status(500).send('Error saving experience');
-                }
-            });
+        const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
+        const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
+        connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
+            if (error) {
+                console.error('Error saving experience:', error);
+                return res.status(500).send('Error saving experience');
+            }
         });
 
         // Inserting Skills
-        parsedSkills.forEach(skill => {
-            const skillValues = [user.id, email, skill.skill_name, skill.proficiency_level];
-            const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES (?, ?, ?, ?)';
-            connection.query(insertSkillsQuery, skillValues, (error, results) => {
-                if (error) {
-                    console.error('Error saving skill:', error);
-                    return res.status(500).send('Error saving skill');
-                }
-            });
+        const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
+        const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
+        connection.query(insertSkillsQuery, [skillValues], (error, results) => {
+            if (error) {
+                console.error('Error saving skill:', error);
+                return res.status(500).send('Error saving skill');
+            }
         });
 
         // Inserting Certificates
-        parsedCertificates.forEach(cert => {
-            const certificateValues = [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email];
-            const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-            connection.query(insertCertificatesQuery, certificateValues, (error, results) => {
-                if (error) {
-                    console.error('Error saving certificate:', error);
-                    return res.status(500).send('Error saving certificate');
-                }
-            });
+        const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
+        const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
+        connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
+            if (error) {
+                console.error('Error saving certificate:', error);
+                return res.status(500).send('Error saving certificate');
+            }
         });
 
         // Create combined descriptions for education and experience
