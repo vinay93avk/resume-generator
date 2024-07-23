@@ -364,6 +364,11 @@ router.post('/generate_resume', async (req, res) => {
         }
       });
     });
+  } catch (error) {
+    console.error('Error generating description:', error);
+    res.status(500).send('Error generating description');
+  }
+});
 
   
   router.get('/download_resume', async (req, res) => {
