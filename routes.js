@@ -4,7 +4,6 @@ const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const pdfkit = require('pdfkit');
-const blobStream = require('blob-stream');
 const AWS = require('aws-sdk');
 const ejs = require('ejs');
 const path = require('path');
@@ -236,8 +235,7 @@ function parseSkills(skills) {
           return res.status(500).send('Error saving education');
         }
       });
-  
-      // Inserting Experience
+// Inserting Experience
 const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
 const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
 connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
@@ -247,6 +245,7 @@ connection.query(insertExperienceQuery, [experienceValues], (error, results) => 
     }
 });
 
+// Inserting Skills
 const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
 const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
 connection.query(insertSkillsQuery, [skillValues], (error, results) => {
@@ -256,6 +255,7 @@ connection.query(insertSkillsQuery, [skillValues], (error, results) => {
     }
 });
 
+// Inserting Certificates
 const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
 const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
 connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
@@ -265,9 +265,11 @@ connection.query(insertCertificatesQuery, [certificateValues], (error, results) 
     }
 });
 
+// Creating combined descriptions
 const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
 const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
 
+// Inserting into resumes table
 const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
 const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
 connection.query(insertResumeQuery, resumeValues, (error, results) => {
@@ -276,6 +278,7 @@ connection.query(insertResumeQuery, resumeValues, (error, results) => {
         return res.status(500).send('Error saving resume');
     }
 
+    // Render the resume to HTML
     ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
         firstName,
         lastName,
@@ -337,34 +340,35 @@ connection.query(insertResumeQuery, resumeValues, (error, results) => {
     });
 });
 } catch (error) {
-    console.error('Error generating description:', error);
-    res.status(500).send('Error generating description');
-}
+  console.error('Error generating description:', error);
+  res.status(500).send('Error generating description');
+  }
+  });
 
 
-          router.get('/download_resume', async (req, res) => {
-            if (!req.session.user) {
-                return res.redirect('/login'); // Redirect to login if the user is not logged in
-            }
-        
-            const userId = req.session.user.id;
-        
-            const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-            connection.query(query, [userId], (error, results) => {
-                if (error) {
-                    console.error('Error fetching resume URL:', error);
-                    return res.status(500).send('Error fetching resume URL');
-                }
-        
-                if (results.length === 0 || !results[0].s3_url) {
-                    return res.status(404).send('No resume found');
-                }
-        
-                const pdfUrl = results[0].s3_url;
-                res.redirect(pdfUrl); // Redirect the user to the S3 URL for downloading
-            });
-        });
-        
+    router.get('/download_resume', async (req, res) => {
+      if (!req.session.user) {
+          return res.redirect('/login'); // Redirect to login if the user is not logged in
+      }
+  
+      const userId = req.session.user.id;
+  
+      const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+      connection.query(query, [userId], (error, results) => {
+          if (error) {
+              console.error('Error fetching resume URL:', error);
+              return res.status(500).send('Error fetching resume URL');
+          }
+  
+          if (results.length === 0 || !results[0].s3_url) {
+              return res.status(404).send('No resume found');
+          }
+  
+          const pdfUrl = results[0].s3_url;
+          res.redirect(pdfUrl); // Redirect the user to the S3 URL for downloading
+      });
+  });
+  
     
   
 
@@ -923,4 +927,3 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
   module.exports = router;
-  
