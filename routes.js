@@ -175,6 +175,7 @@ function parseExperience(companyNames, roles, startDates, endDates, descriptions
   return experience;
 }
 
+// Modify the existing code to render the generated resume page after saving to S3
 router.post('/generate_resume', async (req, res) => {
   const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
   const { firstName, lastName, email, phone } = req.session.user;
@@ -297,7 +298,7 @@ router.post('/generate_resume', async (req, res) => {
           console.error('Error rendering resume HTML:', err);
           return res.status(500).send('Error rendering resume HTML');
         }
-      
+
         try {
           const browser = await puppeteer.launch({
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -306,20 +307,20 @@ router.post('/generate_resume', async (req, res) => {
           await page.setContent(html, { waitUntil: 'networkidle0' });
           const pdfBuffer = await page.pdf({ format: 'A4' });
           await browser.close();
-      
+
           const s3Params = {
             Bucket: 'resume-generator-ocu',
             Key: `resumes/${user.id}-${Date.now()}.pdf`,
             Body: pdfBuffer,
             ContentType: 'application/pdf'
           };
-      
+
           s3.upload(s3Params, (s3Err, data) => {
             if (s3Err) {
               console.error('Error uploading PDF to S3:', s3Err);
               return res.status(500).send('Error uploading PDF to S3');
             }
-      
+
             // Update the resumes table with the S3 URL
             const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
             connection.query(updateResumeQuery, [data.Location, results.insertId], (updateErr) => {
@@ -328,7 +329,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error updating resume with S3 URL');
               }
 
-              res.redirect('/dashboard');
+              res.redirect('/dashboard'); // Redirect to the dashboard to view the generated resume
             });
           });
         } catch (error) {
@@ -343,30 +344,41 @@ router.post('/generate_resume', async (req, res) => {
   }
 });
 
-router.get('/download_resume', async (req, res) => {
+// Add this route to render the generated resume page
+router.get('/dashboard', (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
 
+  // Fetch the latest resume details for the logged-in user
   const userId = req.session.user.id;
+  const query = 'SELECT * FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+  
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error('Error fetching resume:', error);
+      return res.status(500).send('Error fetching resume');
+    }
 
-  const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-connection.query(query, [userId], (error, results) => {
-  if (error) {
-    console.error('Error fetching resume URL:', error);
-    return res.status(500).send('Error fetching resume URL');
-  }
+    if (results.length === 0) {
+      return res.status(404).send('No resume found');
+    }
 
-  if (results.length === 0 || !results[0].s3_url) {
-    return res.status(404).send('No resume found');
-  }
-
-  const pdfUrl = results[0].s3_url;
-  res.redirect(pdfUrl); // Redirect the user to the S3 URL for downloading
+    const resume = results[0];
+    
+    res.render('generated_resume', {
+      firstName: resume.firstName,
+      lastName: resume.lastName,
+      email: resume.email,
+      phone: resume.phone,
+      education: parseEducation(resume.education),
+      experience: parseExperience(resume.experience),
+      skills: parseSkills(resume.skills),
+      linkedUrl: resume.linkedUrl,
+      certificates: parseCertificates(resume.certificates)
+    });
+  });
 });
-});
-
-
 
   router.get('/download_resume', async (req, res) => {
     if (!req.session.user) {
