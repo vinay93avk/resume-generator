@@ -4,15 +4,13 @@ const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const AWS = require('aws-sdk');
-const ejs = require('ejs');
 const pdf = require('html-pdf');
-const { Readable } = require('stream');
+const ejs = require('ejs');
+const fs = require('fs');
+const path = require('path');
 
-// Configure AWS SDK
-AWS.config.update({ region: process.env.AWS_REGION });
+AWS.config.update({ region: 'us-west-2' });
 const s3 = new AWS.S3();
-const S3_BUCKET = process.env.S3_BUCKET;
-
 const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -90,7 +88,22 @@ router.post('/login', async (req, res) => {
         console.error('Error inserting session:', sessionError);
         return res.status(500).send('Error inserting session');
       }
-      res.redirect('/resume');
+
+      // Check if resume exists
+      const resumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+      connection.query(resumeQuery, [user.id], (error, results) => {
+        if (error) {
+          console.error('Error fetching resume URL:', error);
+          return res.status(500).send('Error fetching resume URL');
+        }
+
+        if (results.length > 0) {
+          const s3Url = results[0].s3_url;
+          res.render('dashboard', { user: req.session.user, pdfUrl: s3Url });
+        } else {
+          res.redirect('/resume');
+        }
+      });
     });
   });
 });
@@ -125,23 +138,7 @@ router.get('/resume', (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
-
-  // Fetch the user's resume URL from the database
-  const user = req.session.user;
-  const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-  connection.query(query, [user.id], (error, results) => {
-    if (error) {
-      console.error('Error fetching resume URL:', error);
-      return res.status(500).send('Error fetching resume URL');
-    }
-
-    if (results.length === 0) {
-      return res.render('resume', { user, resumeUrl: null });
-    }
-
-    const resumeUrl = results[0].s3_url;
-    res.render('resume', { user, resumeUrl });
-  });
+  res.render('resume', { user: req.session.user });
 });
 
 // Function to handle splitting skills
@@ -240,121 +237,112 @@ router.post('/generate_resume', async (req, res) => {
   try {
     // Generate experience points for each experience entry
     const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
-        // Add generated experience points to each experience entry
-        parsedExperience.forEach((exp, index) => {
-            exp.description = experiencePointsArray[index].join('; '); // Ensure it's a string
-          });
-      
-          // Inserting Education
-          const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
-          const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
-          connection.query(insertEducationQuery, [educationValues], (error, results) => {
-            if (error) {
-              console.error('Error saving education:', error);
-              return res.status(500).send('Error saving education');
-            }
-          });
-      
-          // Inserting Experience
-          const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
-          const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
-          connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
-            if (error) {
-              console.error('Error saving experience:', error);
-              return res.status(500).send('Error saving experience');
-            }
-          });
-      
-          // Inserting Skills
-          const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
-          const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
-          connection.query(insertSkillsQuery, [skillValues], (error, results) => {
-            if (error) {
-              console.error('Error saving skill:', error);
-              return res.status(500).send('Error saving skill');
-            }
-          });
-      
-          // Inserting Certificates
-          const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
-          const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
-          connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
-            if (error) {
-              console.error('Error saving certificate:', error);
-              return res.status(500).send('Error saving certificate');
-            }
-          });
-      
-          // Render resume as HTML
-          const resumeHtml = await ejs.renderFile('views/generated_resume.ejs', {
-            firstName,
-            lastName,
-            email,
-            phone,
-            education: parsedEducation,
-            experience: parsedExperience.map(exp => ({
-              ...exp,
-              description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-            })),
-            skills: parsedSkills,
-            linkedUrl,
-            certificates: parsedCertificates
-          });
-      
-          // Generate PDF from HTML
-          pdf.create(resumeHtml).toBuffer((err, buffer) => {
-            if (err) {
-              console.error('Error generating PDF:', err);
-              return res.status(500).send('Error generating PDF');
-            }
-      
-            // Upload PDF to S3
-            const params = {
-              Bucket: S3_BUCKET,
-              Key: `${user.id}_${Date.now()}.pdf`,
-              Body: buffer,
-              ContentType: 'application/pdf',
-              ACL: 'public-read'
-            };
-      
-            s3.upload(params, (err, data) => {
-              if (err) {
-                console.error('Error uploading to S3:', err);
-                return res.status(500).send('Error uploading to S3');
-              }
-      
-              // Save S3 URL to the database
-              const s3Url = data.Location;
-              const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl, s3_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-              const resumeValues = [user.id, firstName, lastName, email, phone, parsedEducation, parsedExperience, parsedSkills, linkedUrl, s3Url];
-              connection.query(insertResumeQuery, resumeValues, (error, results) => {
-                if (error) {
-                  console.error('Error saving resume:', error);
-                  return res.status(500).send('Error saving resume');
-                }
-                res.render('generated_resume', {
-                  firstName,
-                  lastName,
-                  email,
-                  phone,
-                  education: parsedEducation,
-                  experience: parsedExperience.map(exp => ({
-                    ...exp,
-                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-                  })),
-                  skills: parsedSkills,
-                  linkedUrl,
-                  certificates: parsedCertificates,
-                  pdfUrl: s3Url // Pass the PDF URL to the template
-                });
-              });
-            });
-          });
-        } catch (error) {
-          console.error('Error generating description:', error);
-          res.status(500).send('Error generating description');
+
+    // Add generated experience points to each experience entry
+    parsedExperience.forEach((exp, index) => {
+        exp.description = experiencePointsArray[index].join('; '); // Ensure it's a string
+    });
+
+    // Inserting Education
+    const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
+    const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
+    connection.query(insertEducationQuery, [educationValues], (error, results) => {
+        if (error) {
+            console.error('Error saving education:', error);
+            return res.status(500).send('Error saving education');
         }
-      });      
+    });
+
+    // Inserting Experience
+    const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
+    const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
+    connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
+        if (error) {
+            console.error('Error saving experience:', error);
+            return res.status(500).send('Error saving experience');
+        }
+    });
+
+    // Inserting Skills
+    const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
+    const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
+    connection.query(insertSkillsQuery, [skillValues], (error, results) => {
+        if (error) {
+            console.error('Error saving skill:', error);
+            return res.status(500).send('Error saving skill');
+        }
+    });
+
+    // Inserting Certificates
+    const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
+    const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
+    connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
+        if (error) {
+            console.error('Error saving certificate:', error);
+            return res.status(500).send('Error saving certificate');
+        }
+    });
+
+    // Create combined descriptions for education and experience
+    const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
+    const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
+
+    // Render the resume using EJS template
+    const resumeHtml = await ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
+        firstName,
+        lastName,
+        email,
+        phone,
+        education: parsedEducation,
+        experience: parsedExperience.map(exp => ({
+            ...exp,
+            description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
+        })),
+        skills: parsedSkills,
+        linkedUrl,
+        certificates: parsedCertificates
+    });
+
+    // Convert HTML to PDF
+    pdf.create(resumeHtml).toBuffer(async (err, buffer) => {
+        if (err) {
+            console.error('Error generating PDF:', err);
+            return res.status(500).send('Error generating PDF');
+        }
+
+        // Save PDF to S3
+        const s3Params = {
+            Bucket: 'resume-generator-ocu',
+            Key: `resumes/${user.id}-${Date.now()}.pdf`,
+            Body: buffer,
+            ContentType: 'application/pdf'
+        };
+
+        s3.upload(s3Params, (s3Err, data) => {
+            if (s3Err) {
+                console.error('Error uploading PDF to S3:', s3Err);
+                return res.status(500).send('Error uploading PDF to S3');
+            }
+
+            const s3Url = data.Location;
+
+            // Inserting into resumes table
+            const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl, s3_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl, s3Url];
+            connection.query(insertResumeQuery, resumeValues, (error, results) => {
+                if (error) {
+                    console.error('Error saving resume:', error);
+                    return res.status(500).send('Error saving resume');
+                }
+                res.redirect('/dashboard');
+            });
+        });
+    });
+} catch (error) {
+    console.error('Error generating description:', error);
+    res.status(500).send('Error generating description');
+}
+});  
   
   router.get('/dashboard', (req, res) => {
     if (!req.session.user) {
