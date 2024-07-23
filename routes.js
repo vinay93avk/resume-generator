@@ -296,7 +296,7 @@ router.post('/generate_resume', async (req, res) => {
         skills: parsedSkills,
         linkedUrl,
         certificates: parsedCertificates,
-        pdf: true  // Indicate that this is for PDF generation
+        pdf: false  // Indicate that this is for web rendering
       }, async (err, html) => {
         if (err) {
           console.error('Error rendering resume HTML:', err);
@@ -354,7 +354,8 @@ router.post('/generate_resume', async (req, res) => {
                 skills: parsedSkills,
                 linkedUrl,
                 certificates: parsedCertificates,
-                downloadUrl: data.Location
+                downloadUrl: data.Location,
+                pdf: true // Set pdf to false for web rendering
               });
             });
           });
