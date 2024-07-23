@@ -3,6 +3,10 @@ const router = express.Router();
 const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
+const path = require('path');
+const ejs = require('ejs');
+const pdf = require('html-pdf');
+const fs = require('fs');
 const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -85,32 +89,32 @@ router.post('/login', async (req, res) => {
   });
 });
 
-  router.get('/logout', (req, res) => {
-    if (req.session.user) {
-      const user = req.session.user;
-      const logoutTime = new Date();
-      console.log(`Updating logout time for user: ${user.id}, email: ${user.email}, logoutTime: ${logoutTime}`);
-  
-      const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND email = ? AND logout_time IS NULL';
-      connection.query(updateLogoutQuery, [logoutTime, user.id, user.email], (error, results) => {
-        if (error) {
-          console.error('Error updating session:', error);
-          return res.status(500).send('Error updating session');
+router.get('/logout', (req, res) => {
+  if (req.session.user) {
+    const user = req.session.user;
+    const logoutTime = new Date();
+    console.log(`Updating logout time for user: ${user.id}, email: ${user.email}, logoutTime: ${logoutTime}`);
+
+    const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND email = ? AND logout_time IS NULL';
+    connection.query(updateLogoutQuery, [logoutTime, user.id, user.email], (error, results) => {
+      if (error) {
+        console.error('Error updating session:', error);
+        return res.status(500).send('Error updating session');
+      }
+      console.log('Logout time updated successfully');
+
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).send('Failed to logout');
         }
-        console.log('Logout time updated successfully');
-  
-        req.session.destroy((err) => {
-          if (err) {
-            return res.status(500).send('Failed to logout');
-          }
-          res.redirect('/');
-        });
+        res.redirect('/');
       });
-    } else {
-      res.redirect('/');
-    }
-  });
-  
+    });
+  } else {
+    res.redirect('/');
+  }
+});
+
 router.get('/resume', (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
@@ -229,7 +233,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving education');
             }
         });
-
+        
         // Inserting Experience
         const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
         const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
@@ -239,7 +243,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving experience');
             }
         });
-
+        
         // Inserting Skills
         const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
         const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
@@ -249,7 +253,7 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving skill');
             }
         });
-
+        
         // Inserting Certificates
         const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
         const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
@@ -259,11 +263,11 @@ router.post('/generate_resume', async (req, res) => {
                 return res.status(500).send('Error saving certificate');
             }
         });
-
+        
         // Create combined descriptions for education and experience
         const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
         const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
-
+        
         // Inserting into resumes table
         const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
@@ -272,7 +276,9 @@ router.post('/generate_resume', async (req, res) => {
                 console.error('Error saving resume:', error);
                 return res.status(500).send('Error saving resume');
             }
-            res.render('generated_resume', {
+            
+            // Render the resume to HTML
+            ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
                 firstName,
                 lastName,
                 email,
@@ -285,13 +291,81 @@ router.post('/generate_resume', async (req, res) => {
                 skills: parsedSkills,
                 linkedUrl,
                 certificates: parsedCertificates
+            }, (err, html) => {
+                if (err) {
+                    console.error('Error rendering EJS to HTML:', err);
+                    return res.status(500).send('Error generating resume');
+                }
+        
+                // Convert the HTML to PDF
+                pdf.create(html).toBuffer((err, buffer) => {
+                    if (err) {
+                        console.error('Error creating PDF:', err);
+                        return res.status(500).send('Error creating PDF');
+                    }
+        
+                    // Serve the PDF for download
+                    res.setHeader('Content-Disposition', `attachment; filename="${firstName}_${lastName}_Resume.pdf"`);
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.send(buffer);
+                });
             });
         });
-    } catch (error) {
-        console.error('Error generating description:', error);
-        res.status(500).send('Error generating description');
-    }
-});
+        } catch (error) {
+            console.error('Error generating description:', error);
+            res.status(500).send('Error generating description');
+        }
+        });
+        
+        router.get('/download_resume', (req, res) => {
+            if (!req.session.user) {
+                return res.redirect('/login'); // Redirect to login if the user is not logged in
+            }
+        
+            const { firstName, lastName, email, phone } = req.session.user;
+            const user = req.session.user;
+        
+            // Parsing Education, Experience, Skills, and Certificates
+            const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+            const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
+            const parsedSkills = parseSkills(skills);
+            const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+        
+            // Render the resume to HTML
+            ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
+                firstName,
+                lastName,
+                email,
+                phone,
+                education: parsedEducation,
+                experience: parsedExperience.map(exp => ({
+                    ...exp,
+                    description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
+                })),
+                skills: parsedSkills,
+                linkedUrl,
+                certificates: parsedCertificates
+            }, (err, html) => {
+                if (err) {
+                    console.error('Error rendering EJS to HTML:', err);
+                    return res.status(500).send('Error generating resume');
+                }
+        
+                // Convert the HTML to PDF
+                pdf.create(html).toBuffer((err, buffer) => {
+                    if (err) {
+                        console.error('Error creating PDF:', err);
+                        return res.status(500).send('Error creating PDF');
+                    }
+        
+                    // Serve the PDF for download
+                    res.setHeader('Content-Disposition', `attachment; filename="${firstName}_${lastName}_Resume.pdf"`);
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.send(buffer);
+                });
+            });
+        });
+        
 
 
 router.get('/user-count', (req, res) => {
