@@ -428,7 +428,17 @@ router.get('/user/:email/experience', (req, res) => {
   
   router.get('/user/:email/education/degrees', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT degree FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = `
+        SELECT degree FROM Education e
+        JOIN users u ON e.user_id = u.id
+        WHERE u.email = ?
+        AND e.end_date = (
+            SELECT MAX(end_date) FROM Education e2
+            WHERE e2.user_id = e.user_id
+        )
+        GROUP BY e.degree
+        ORDER BY e.end_date DESC;
+    `;
   
     connection.query(query, [email], (error, results) => {
         if (error) {
