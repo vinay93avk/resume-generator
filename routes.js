@@ -436,7 +436,7 @@ router.get('/user/:email/experience', (req, res) => {
             SELECT MAX(end_date) FROM Education e2
             WHERE e2.user_id = e.user_id
         )
-        GROUP BY e.degree
+        GROUP BY e.degree, e.end_date
         ORDER BY e.end_date DESC;
     `;
   
@@ -455,10 +455,21 @@ router.get('/user/:email/experience', (req, res) => {
     });
 });
 
+
   
 router.get('/user/:email/education/institutions', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT institution FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = `
+        SELECT institution FROM Education e
+        JOIN users u ON e.user_id = u.id
+        WHERE u.email = ?
+        AND e.end_date = (
+            SELECT MAX(end_date) FROM Education e2
+            WHERE e2.user_id = e.user_id
+        )
+        GROUP BY e.institution, e.end_date
+        ORDER BY e.end_date DESC;
+    `;
   
     connection.query(query, [email], (error, results) => {
         if (error) {
@@ -474,10 +485,21 @@ router.get('/user/:email/education/institutions', (req, res) => {
         res.json({ institutions });
     });
 });
+
   
 router.get('/user/:email/education/start_dates', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT DATE_FORMAT(start_date, "%Y-%m-%d") AS start_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = `
+        SELECT DATE_FORMAT(start_date, "%Y-%m-%d") AS start_date FROM Education e
+        JOIN users u ON e.user_id = u.id
+        WHERE u.email = ?
+        AND e.end_date = (
+            SELECT MAX(end_date) FROM Education e2
+            WHERE e2.user_id = e.user_id
+        )
+        GROUP BY e.start_date, e.end_date
+        ORDER BY e.end_date DESC;
+    `;
   
     connection.query(query, [email], (error, results) => {
         if (error) {
@@ -494,10 +516,21 @@ router.get('/user/:email/education/start_dates', (req, res) => {
     });
 });
 
+
   
 router.get('/user/:email/education/end_dates', (req, res) => {
     const email = req.params.email;
-    const query = 'SELECT DATE_FORMAT(end_date, "%Y-%m-%d") AS end_date FROM Education e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
+    const query = `
+        SELECT DATE_FORMAT(end_date, "%Y-%m-%d") AS end_date FROM Education e
+        JOIN users u ON e.user_id = u.id
+        WHERE u.email = ?
+        AND e.end_date = (
+            SELECT MAX(end_date) FROM Education e2
+            WHERE e2.user_id = e.user_id
+        )
+        GROUP BY e.end_date
+        ORDER BY e.end_date DESC;
+    `;
   
     connection.query(query, [email], (error, results) => {
         if (error) {
