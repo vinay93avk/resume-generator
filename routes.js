@@ -4,6 +4,7 @@ const axios = require('axios');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const pdfkit = require('pdfkit');
+const blobStream = require('blob-stream');
 const AWS = require('aws-sdk');
 const ejs = require('ejs');
 const path = require('path');
