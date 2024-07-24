@@ -26,6 +26,17 @@
                 <div class="resume-item">
                     <h3><%= resume.firstName %> <%= resume.lastName %></h3>
                     <iframe src="<%= resume.s3_url %>" width="100%" height="500px"></iframe>
+                    <div class="comments">
+                        <h4>Comments</h4>
+                        <% resume.comments.forEach(comment => { %>
+                            <p><strong>Admin:</strong> <%= comment.comment %> <em>(<%= comment.created_at %>)</em></p>
+                        <% }) %>
+                    </div>
+                    <form action="/add_comment" method="POST">
+                        <input type="hidden" name="resume_id" value="<%= resume.id %>">
+                        <textarea name="comment" rows="3" placeholder="Add a comment..."></textarea>
+                        <button type="submit">Add Comment</button>
+                    </form>
                 </div>
             <% }); %>
         </div>

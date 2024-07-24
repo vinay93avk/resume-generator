@@ -139,14 +139,56 @@ router.get('/admin_dashboard', (req, res) => {
     return res.status(403).send('Access denied'); // Only allow access if the user is an admin
   }
 
-  const query = 'SELECT users.firstName, users.lastName, resumes.s3_url FROM resumes JOIN users ON resumes.user_id = users.id ORDER BY resumes.created_at DESC';
+  const query = `
+    SELECT users.firstName, users.lastName, resumes.id, resumes.s3_url, comments.comment, comments.created_at
+    FROM resumes
+    JOIN users ON resumes.user_id = users.id
+    LEFT JOIN comments ON resumes.id = comments.resume_id
+    ORDER BY resumes.created_at DESC
+  `;
   connection.query(query, (error, results) => {
     if (error) {
       console.error('Error fetching all resumes:', error);
       return res.status(500).send('Error fetching all resumes');
     }
 
-    res.render('admin_dashboard', { resumes: results });
+    const resumes = results.reduce((acc, row) => {
+      const resume = acc.find(r => r.id === row.id);
+      if (resume) {
+        resume.comments.push({ comment: row.comment, created_at: row.created_at });
+      } else {
+        acc.push({
+          id: row.id,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          s3_url: row.s3_url,
+          comments: row.comment ? [{ comment: row.comment, created_at: row.created_at }] : []
+        });
+      }
+      return acc;
+    }, []);
+
+    res.render('admin_dashboard', { resumes });
+  });
+});
+
+
+router.post('/add_comment', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+    return res.status(403).send('Access denied');
+  }
+
+  const { resume_id, comment } = req.body;
+  const admin_id = req.session.user.id;
+
+  const query = 'INSERT INTO comments (resume_id, admin_id, comment) VALUES (?, ?, ?)';
+  connection.query(query, [resume_id, admin_id, comment], (error, results) => {
+    if (error) {
+      console.error('Error adding comment:', error);
+      return res.status(500).send('Error adding comment');
+    }
+
+    res.redirect('/admin_dashboard');
   });
 });
 
