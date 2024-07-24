@@ -118,21 +118,31 @@ router.get('/show_resume', (req, res) => {
 
   const userId = req.session.user.id;
 
-  const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+  const query = `
+    SELECT resumes.s3_url, comments.comment, comments.created_at
+    FROM resumes
+    LEFT JOIN comments ON resumes.id = comments.resume_id
+    WHERE resumes.user_id = ?
+    ORDER BY resumes.created_at DESC
+    LIMIT 1
+  `;
   connection.query(query, [userId], (error, results) => {
     if (error) {
-      console.error('Error fetching resume URL:', error);
-      return res.status(500).send('Error fetching resume URL');
+      console.error('Error fetching resume and comments:', error);
+      return res.status(500).send('Error fetching resume and comments');
     }
 
-    if (results.length === 0 || !results[0].s3_url) {
-      return res.redirect('/resume'); // No resume found, redirect to resume creation page
+    if (results.length === 0) {
+      return res.status(404).send('No resume found');
     }
 
-    const pdfUrl = results[0].s3_url;
-    res.render('show_resume', { pdfUrl });
+    const resumeData = results[0];
+    const comments = results.map(row => ({ comment: row.comment, created_at: row.created_at })).filter(row => row.comment);
+
+    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments });
   });
 });
+
 
 router.get('/admin_dashboard', (req, res) => {
   if (!req.session.user || !req.session.user.is_admin) {
