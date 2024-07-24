@@ -21,22 +21,14 @@
     </header>
     <div class="container">
         <h2>All Generated Resumes</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Resume Link</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% resumes.forEach(resume => { %>
-                    <tr>
-                        <td><%= resume.firstName %> <%= resume.lastName %></td>
-                        <td><a href="<%= resume.s3_url %>" target="_blank">View Resume</a></td>
-                    </tr>
-                <% }); %>
-            </tbody>
-        </table>
+        <div class="resume-previews">
+            <% resumes.forEach(resume => { %>
+                <div class="resume-item">
+                    <h3><%= resume.firstName %> <%= resume.lastName %></h3>
+                    <iframe src="<%= resume.s3_url %>" width="100%" height="500px"></iframe>
+                </div>
+            <% }); %>
+        </div>
     </div>
 </body>
 </html>
