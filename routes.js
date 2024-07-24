@@ -327,7 +327,11 @@ const generateExperiencePoints = async (exp, jobDescription, skills) => {
 
 // Route to generate and save resume
 router.post('/generate_resume', async (req, res) => {
-  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date, project_name, github_link } = req.body;
+  const {
+    degree, institution, startDate, endDate, company_name, role, experience_start_date,
+    experience_end_date, description, skills, linkedUrl, jobDescription,
+    certificate_name, issuing_organization, issue_date, expiration_date, project_name, github_link
+  } = req.body;
   const { firstName, lastName, email, phone } = req.session.user;
 
   if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
@@ -336,7 +340,7 @@ router.post('/generate_resume', async (req, res) => {
 
   const user = req.session.user;
 
-  // Parsing Education, Experience, Skills, and Certificates
+  // Parsing Education, Experience, Skills, Certificates, and Projects
   const parsedEducation = parseEducation(degree, institution, startDate, endDate);
   const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
   const parsedSkills = parseSkills(skills);
@@ -393,14 +397,14 @@ router.post('/generate_resume', async (req, res) => {
     });
 
     // Inserting Projects
-  const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?';
-  const projectValues = parsedProjects.map(project => [user.id, project.project_name, project.github_link]);
-  connection.query(insertProjectsQuery, [projectValues], (error, results) => {
-    if (error) {
-      console.error('Error saving projects:', error);
-      return res.status(500).send('Error saving projects');
-    }
-  });
+    const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?';
+    const projectValues = parsedProjects.map(project => [user.id, project.project_name, project.github_link]);
+    connection.query(insertProjectsQuery, [projectValues], (error, results) => {
+      if (error) {
+        console.error('Error saving projects:', error);
+        return res.status(500).send('Error saving projects');
+      }
+    });
 
     // Create combined descriptions for education and experience
     const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
@@ -431,6 +435,7 @@ router.post('/generate_resume', async (req, res) => {
         skills: parsedSkills,
         linkedUrl,
         certificates: parsedCertificates,
+        projects: parsedProjects, // Include projects
         pdf: false,  // Indicate that this is for web rendering
         downloadUrl: ''  // Provide an empty default value for web rendering
       }, async (err, html) => {
@@ -454,6 +459,7 @@ router.post('/generate_resume', async (req, res) => {
             skills: parsedSkills,
             linkedUrl,
             certificates: parsedCertificates,
+            projects: parsedProjects, // Include projects
             pdf: true  // Indicate that this is for PDF generation
           });
 
@@ -507,6 +513,7 @@ router.post('/generate_resume', async (req, res) => {
                 skills: parsedSkills,
                 linkedUrl,
                 certificates: parsedCertificates,
+                projects: parsedProjects, // Include projects
                 downloadUrl: data.Location,  // Provide the S3 URL for downloading
                 pdf: false // Set pdf to false for web rendering
               });
