@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1>Admin Dashboard</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/logout">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <h2>All Generated Resumes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Resume Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% resumes.forEach(resume => { %>
+                    <tr>
+                        <td><%= resume.firstName %> <%= resume.lastName %></td>
+                        <td><a href="<%= resume.s3_url %>" target="_blank">View Resume</a></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

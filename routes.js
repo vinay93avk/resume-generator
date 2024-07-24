@@ -87,22 +87,26 @@ router.post('/login', async (req, res) => {
         return res.status(500).send('Error inserting session');
       }
 
-      // Check if resume exists
-      const checkResumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-      connection.query(checkResumeQuery, [user.id], (resumeError, resumeResults) => {
-        if (resumeError) {
-          console.error('Error checking for resume:', resumeError);
-          return res.status(500).send('Error checking for resume');
-        }
+      if (user.is_admin) {
+        return res.redirect('/admin_dashboard'); // Redirect to admin dashboard if the user is an admin
+      } else {
+        // Check if resume exists
+        const checkResumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+        connection.query(checkResumeQuery, [user.id], (resumeError, resumeResults) => {
+          if (resumeError) {
+            console.error('Error checking for resume:', resumeError);
+            return res.status(500).send('Error checking for resume');
+          }
 
-        if (resumeResults.length > 0 && resumeResults[0].s3_url) {
-          // Resume exists, redirect to show the resume
-          return res.redirect('/show_resume');
-        } else {
-          // No resume found, redirect to resume creation page
-          return res.redirect('/resume');
-        }
-      });
+          if (resumeResults.length > 0 && resumeResults[0].s3_url) {
+            // Resume exists, redirect to show the resume
+            return res.redirect('/show_resume');
+          } else {
+            // No resume found, redirect to resume creation page
+            return res.redirect('/resume');
+          }
+        });
+      }
     });
   });
 });
@@ -129,6 +133,23 @@ router.get('/show_resume', (req, res) => {
     res.render('show_resume', { pdfUrl });
   });
 });
+
+router.get('/admin_dashboard', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+    return res.status(403).send('Access denied'); // Only allow access if the user is an admin
+  }
+
+  const query = 'SELECT users.firstName, users.lastName, resumes.s3_url FROM resumes JOIN users ON resumes.user_id = users.id ORDER BY resumes.created_at DESC';
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.error('Error fetching all resumes:', error);
+      return res.status(500).send('Error fetching all resumes');
+    }
+
+    res.render('admin_dashboard', { resumes: results });
+  });
+});
+
 
 
 router.get('/logout', (req, res) => {
