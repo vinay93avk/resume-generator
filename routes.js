@@ -1110,4 +1110,76 @@ router.get('/user/:email/certificates', (req, res) => {
     });
   });
 
+  router.get('/user/:email/projects', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT p.project_name, p.github_link FROM Projects p JOIN users u ON p.user_id = u.id WHERE u.email = ?';
+    
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No projects found for the given email');
+      }
+  
+      res.json(results);
+    });
+  });
+  
+  router.get('/user/:email/projects/names', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT p.project_name FROM Projects p JOIN users u ON p.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No project names found for the given email');
+      }
+  
+      res.json(results.map(row => row.project_name));
+    });
+  });
+  
+  router.get('/user/:email/projects/github_links', (req, res) => {
+    const email = req.params.email;
+    const query = 'SELECT p.github_link FROM Projects p JOIN users u ON p.user_id = u.id WHERE u.email = ?';
+  
+    connection.query(query, [email], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No GitHub links found for the given email');
+      }
+  
+      res.json(results.map(row => row.github_link));
+    });
+  });
+  
+  router.get('/user/:email/projects/:project_name', (req, res) => {
+    const { email, project_name } = req.params;
+    const query = 'SELECT p.project_name, p.github_link FROM Projects p JOIN users u ON p.user_id = u.id WHERE u.email = ? AND p.project_name = ?';
+  
+    connection.query(query, [email, project_name], (error, results) => {
+      if (error) {
+        console.error('Error querying the database:', error);
+        return res.status(500).send('Error querying the database');
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send('No details found for the given project');
+      }
+  
+      res.json(results[0]);
+    });
+  });
+  
   module.exports = router;
