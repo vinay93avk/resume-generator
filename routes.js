@@ -287,6 +287,18 @@ function parseExperience(companyNames, roles, startDates, endDates, descriptions
   return experience;
 }
 
+function parseProjects(projectNames, githubLinks) {
+  const projects = [];
+  for (let i = 0; i < projectNames.length; i++) {
+    projects.push({
+      project_name: projectNames[i],
+      github_link: githubLinks[i]
+    });
+  }
+  return projects;
+}
+
+
 // Function to generate experience points for each experience
 const generateExperiencePoints = async (exp, jobDescription, skills) => {
   const prompt = `Generate concise bullet points for the experience section based on experience at ${exp.company_name} as a ${exp.role} from ${exp.start_date} to ${exp.end_date}, and skills in ${skills}. Ensure the points align with the following job description: ${jobDescription}.`;
@@ -315,7 +327,7 @@ const generateExperiencePoints = async (exp, jobDescription, skills) => {
 
 // Route to generate and save resume
 router.post('/generate_resume', async (req, res) => {
-  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date } = req.body;
+  const { degree, institution, startDate, endDate, company_name, role, experience_start_date, experience_end_date, description, skills, linkedUrl, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date, project_name, github_link } = req.body;
   const { firstName, lastName, email, phone } = req.session.user;
 
   if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
@@ -329,6 +341,7 @@ router.post('/generate_resume', async (req, res) => {
   const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
   const parsedSkills = parseSkills(skills);
   const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+  const parsedProjects = parseProjects(project_name, github_link);
 
   try {
     // Generate experience points for each experience entry
@@ -378,6 +391,16 @@ router.post('/generate_resume', async (req, res) => {
         return res.status(500).send('Error saving certificate');
       }
     });
+
+    // Inserting Projects
+  const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?';
+  const projectValues = parsedProjects.map(project => [user.id, project.project_name, project.github_link]);
+  connection.query(insertProjectsQuery, [projectValues], (error, results) => {
+    if (error) {
+      console.error('Error saving projects:', error);
+      return res.status(500).send('Error saving projects');
+    }
+  });
 
     // Create combined descriptions for education and experience
     const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
