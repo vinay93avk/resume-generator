@@ -6,6 +6,11 @@
     <title>Resume Generator</title>
     <link rel="stylesheet" href="/styles.css">
     <script>
+        function showSpinner() {
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('resume-form').style.display = 'none';
+        }
+
         function addCertificate() {
             const container = document.getElementById("certificates-container");
             const certificateDiv = document.createElement("div");
@@ -69,7 +74,8 @@
     </header>
     <div class="container">
         <h2>Resume Input Form</h2>
-        <form action="/generate_resume" method="post">
+    <div id="resume-form">
+        <form action="/generate_resume" method="post" onsubmit="showSpinner()">
             <section>
                 <h3>Personal Information <span class="required-indicator">*</span></h3>
                 <input type="text" name="firstName" placeholder="First Name" value="<%= user.firstName %>" required readonly><br>
@@ -146,6 +152,8 @@
             
             <input type="submit" value="Generate Resume">
         </form>
+    </div>
+    <div id="spinner" class="spinner"></div>
     </div>
 </body>
 </html>
