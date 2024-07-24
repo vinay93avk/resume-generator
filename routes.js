@@ -282,7 +282,7 @@ router.post('/generate_resume', async (req, res) => {
 
       const resumeId = results.insertId;
 
-      // Render the resume to HTML
+      // Render the resume to HTML for the web view
       ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
         firstName,
         lastName,
@@ -355,7 +355,7 @@ router.post('/generate_resume', async (req, res) => {
                 linkedUrl,
                 certificates: parsedCertificates,
                 downloadUrl: data.Location,
-                pdf: true // Set pdf to false for web rendering
+                pdf: false // Set pdf to false for web rendering
               });
             });
           });
