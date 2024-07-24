@@ -42,6 +42,16 @@
             `;
             container.appendChild(experienceDiv);
         }
+
+        function addProject() {
+            const container = document.getElementById("projects-container");
+            const projectDiv = document.createElement("div");
+            projectDiv.innerHTML = `
+                <input type="text" name="project_name[]" placeholder="Project Name" required><br>
+                <input type="url" name="github_link[]" placeholder="GitHub Link" required><br>
+            `;
+            container.appendChild(projectDiv);
+        }
     </script>
 </head>
 <body>
@@ -85,18 +95,17 @@
                 <h3>LinkedIn <span class="required-indicator">*</span></h3>
                 <input type="text" name="linkedUrl" placeholder="LinkedIn URL"><br>
             </section>
-            
-            <script>
-                function addProject() {
-                    const container = document.getElementById("projects-container");
-                    const projectDiv = document.createElement("div");
-                    projectDiv.innerHTML = `
+
+            <section>
+                <h3>Projects <span class="required-indicator">*</span></h3>
+                <div id="projects-container">
+                    <div>
                         <input type="text" name="project_name[]" placeholder="Project Name" required><br>
                         <input type="url" name="github_link[]" placeholder="GitHub Link" required><br>
-                    `;
-                    container.appendChild(projectDiv);
-                }
-            </script>                  
+                    </div>
+                </div>
+                <button type="button" onclick="addProject()">Add Another Project</button><br><br>
+            </section>
 
             <section>
                 <h3>Experience <span class="required-indicator">*</span></h3>
