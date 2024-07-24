@@ -86,10 +86,50 @@ router.post('/login', async (req, res) => {
         console.error('Error inserting session:', sessionError);
         return res.status(500).send('Error inserting session');
       }
-      res.redirect('/resume');
+
+      // Check if resume exists
+      const checkResumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+      connection.query(checkResumeQuery, [user.id], (resumeError, resumeResults) => {
+        if (resumeError) {
+          console.error('Error checking for resume:', resumeError);
+          return res.status(500).send('Error checking for resume');
+        }
+
+        if (resumeResults.length > 0 && resumeResults[0].s3_url) {
+          // Resume exists, redirect to show the resume
+          return res.redirect('/show_resume');
+        } else {
+          // No resume found, redirect to resume creation page
+          return res.redirect('/resume');
+        }
+      });
     });
   });
 });
+
+router.get('/show_resume', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login'); // Redirect to login if the user is not logged in
+  }
+
+  const userId = req.session.user.id;
+
+  const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error('Error fetching resume URL:', error);
+      return res.status(500).send('Error fetching resume URL');
+    }
+
+    if (results.length === 0 || !results[0].s3_url) {
+      return res.redirect('/resume'); // No resume found, redirect to resume creation page
+    }
+
+    const pdfUrl = results[0].s3_url;
+    res.render('show_resume', { pdfUrl });
+  });
+});
+
 
 router.get('/logout', (req, res) => {
   if (req.session.user) {
