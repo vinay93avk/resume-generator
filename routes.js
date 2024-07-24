@@ -123,8 +123,7 @@ router.get('/show_resume', (req, res) => {
     FROM resumes
     LEFT JOIN comments ON resumes.id = comments.resume_id
     WHERE resumes.user_id = ?
-    ORDER BY resumes.created_at DESC
-    LIMIT 1
+    ORDER BY comments.created_at ASC
   `;
   connection.query(query, [userId], (error, results) => {
     if (error) {
