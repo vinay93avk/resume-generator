@@ -119,7 +119,7 @@ router.get('/show_resume', (req, res) => {
   const userId = req.session.user.id;
 
   const query = `
-    SELECT resumes.s3_url, comments.comment, comments.created_at
+    SELECT resumes.id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
     FROM resumes
     LEFT JOIN comments ON resumes.id = comments.resume_id
     WHERE resumes.user_id = ?
@@ -139,9 +139,10 @@ router.get('/show_resume', (req, res) => {
     const resumeData = results[0];
     const comments = results.map(row => ({ comment: row.comment, created_at: row.created_at })).filter(row => row.comment);
 
-    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments });
+    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId });
   });
 });
+
 
 
 router.get('/admin_dashboard', (req, res) => {
