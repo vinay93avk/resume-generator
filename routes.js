@@ -1219,6 +1219,7 @@ router.post('/edit_resume/:id', (req, res) => {
 });
 
 // Handle resume deletion
+// Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
   const resumeId = req.params.id;
 
@@ -1229,9 +1230,11 @@ router.post('/delete_resume/:id', (req, res) => {
       return res.status(500).send('Error deleting resume');
     }
 
-    res.redirect('/show_resume'); // Redirect to show_resume after deletion
+    // Render a confirmation page after deletion
+    res.render('resume_deleted'); // You can change this view name as needed
   });
 });
+
 
   
   module.exports = router;
