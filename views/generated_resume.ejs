@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/resume_styles.css">
 </head>
 <body>
-    <% if (!pdf) { %>
+    <% if (typeof pdf === 'undefined' || !pdf) { %>
     <header>
         <div class="container">
             <div id="branding">
@@ -63,7 +63,7 @@
                 </li>
             <% }); %>
         </ul>
-        <% if (!pdf) { %>
+        <% if (typeof pdf === 'undefined' || !pdf) { %>
         <a href="<%= downloadUrl %>" class="download-btn">Download PDF</a>
         <% } %>
     </div>
