@@ -1182,7 +1182,7 @@ router.get('/user/:email/certificates', (req, res) => {
     });
   });
 
-  // Show edit resume form
+// Show edit resume form
 router.get('/edit_resume/:id', (req, res) => {
   const resumeId = req.params.id;
   const userId = req.session.user.id;
@@ -1202,19 +1202,80 @@ router.get('/edit_resume/:id', (req, res) => {
   });
 });
 
+
+// Handle resume update
 // Handle resume update
 router.post('/edit_resume/:id', (req, res) => {
   const resumeId = req.params.id;
   const { firstName, lastName, email, phone } = req.body;
 
-  const query = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ? WHERE id = ? AND user_id = ?';
-  connection.query(query, [firstName, lastName, email, phone, resumeId, req.session.user.id], (error) => {
+  const updateQuery = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ? WHERE id = ? AND user_id = ?';
+  connection.query(updateQuery, [firstName, lastName, email, phone, resumeId, req.session.user.id], (error) => {
     if (error) {
       console.error('Error updating resume:', error);
       return res.status(500).send('Error updating resume');
     }
 
-    res.redirect('/show_resume'); // Redirect to resume display page
+    // Fetch the updated resume data
+    const fetchQuery = 'SELECT * FROM resumes WHERE id = ? AND user_id = ?';
+    connection.query(fetchQuery, [resumeId, req.session.user.id], (fetchError, results) => {
+      if (fetchError) {
+        console.error('Error fetching updated resume:', fetchError);
+        return res.status(500).send('Error fetching updated resume');
+      }
+
+      if (results.length === 0) {
+        return res.status(404).send('Resume not found');
+      }
+
+      const updatedResume = results[0];
+
+      // Generate the PDF with updated data
+      ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
+        firstName: updatedResume.firstName,
+        lastName: updatedResume.lastName,
+        email: updatedResume.email,
+        phone: updatedResume.phone,
+        // Add other fields as needed
+      }, async (renderError, html) => {
+        if (renderError) {
+          console.error('Error rendering updated resume HTML:', renderError);
+          return res.status(500).send('Error rendering updated resume HTML');
+        }
+
+        try {
+          const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+          const page = await browser.newPage();
+          await page.setContent(html, { waitUntil: 'networkidle0' });
+
+          // Generate PDF from HTML
+          const pdfBuffer = await page.pdf({ format: 'A4' });
+          await browser.close();
+
+          // Upload the updated PDF to S3
+          const s3Params = {
+            Bucket: 'resume-generator-ocu', // Replace with your bucket name
+            Key: `resumes/${resumeId}.pdf`, // Keep the same key to overwrite the existing file
+            Body: pdfBuffer,
+            ContentType: 'application/pdf'
+          };
+
+          s3.upload(s3Params, (s3Error, data) => {
+            if (s3Error) {
+              console.error('Error uploading updated PDF to S3:', s3Error);
+              return res.status(500).send('Error uploading updated PDF to S3');
+            }
+
+            console.log('Updated PDF uploaded to S3:', data.Location);
+
+            res.redirect('/show_resume'); // Redirect to the resume display page
+          });
+        } catch (pdfError) {
+          console.error('Error generating updated PDF:', pdfError);
+          res.status(500).send('Error generating updated PDF');
+        }
+      });
+    });
   });
 });
 
