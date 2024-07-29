@@ -1181,5 +1181,57 @@ router.get('/user/:email/certificates', (req, res) => {
       res.json(results[0]);
     });
   });
+
+  // Show edit resume form
+router.get('/edit_resume/:id', (req, res) => {
+  const resumeId = req.params.id;
+  const userId = req.session.user.id;
+
+  const query = 'SELECT * FROM resumes WHERE id = ? AND user_id = ?';
+  connection.query(query, [resumeId, userId], (error, results) => {
+    if (error) {
+      console.error('Error fetching resume:', error);
+      return res.status(500).send('Error fetching resume');
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('Resume not found');
+    }
+
+    res.render('edit_resume', { resume: results[0] });
+  });
+});
+
+// Handle resume update
+router.post('/edit_resume/:id', (req, res) => {
+  const resumeId = req.params.id;
+  const { firstName, lastName, email, phone } = req.body;
+
+  const query = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ? WHERE id = ? AND user_id = ?';
+  connection.query(query, [firstName, lastName, email, phone, resumeId, req.session.user.id], (error) => {
+    if (error) {
+      console.error('Error updating resume:', error);
+      return res.status(500).send('Error updating resume');
+    }
+
+    res.redirect('/show_resume'); // Redirect to resume display page
+  });
+});
+
+// Handle resume deletion
+router.post('/delete_resume/:id', (req, res) => {
+  const resumeId = req.params.id;
+
+  const query = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
+  connection.query(query, [resumeId, req.session.user.id], (error) => {
+    if (error) {
+      console.error('Error deleting resume:', error);
+      return res.status(500).send('Error deleting resume');
+    }
+
+    res.redirect('/resumes'); // Redirect to a list of resumes or dashboard
+  });
+});
+
   
   module.exports = router;

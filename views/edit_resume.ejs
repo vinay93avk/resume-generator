@@ -1,0 +1,33 @@
+<!-- edit_resume.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Resume</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1>Edit Resume</h1>
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        <h2>Edit Your Resume</h2>
+        <form action="/edit_resume/<%= resume.id %>" method="post">
+            <!-- Populate fields with existing resume data -->
+            <input type="text" name="firstName" value="<%= resume.firstName %>" required><br>
+            <input type="text" name="lastName" value="<%= resume.lastName %>" required><br>
+            <input type="email" name="email" value="<%= resume.email %>" required><br>
+            <input type="text" name="phone" value="<%= resume.phone %>" required><br>
+            
+            <!-- Add other fields as needed -->
+            
+            <input type="submit" value="Update Resume">
+        </form>
+    </div>
+</body>
+</html>

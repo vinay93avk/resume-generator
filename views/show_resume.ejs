@@ -28,11 +28,18 @@
             <h3>Admin Comments</h3>
             <ul>
                 <% comments.forEach(comment => { %>
-                    <li><strong><%= comment.created_at.toLocaleString() %>:</strong> <%= comment.comment %></li>
+                    <li><strong><%= new Date(comment.created_at).toLocaleString() %>:</strong> <%= comment.comment %></li>
                 <% }) %>
             </ul>
         </div>
         <% } %>
+
+        <div class="action-buttons">
+            <a href="/edit_resume/<%= resumeId %>" class="btn">Edit Resume</a>
+            <form action="/delete_resume/<%= resumeId %>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this resume?');">
+                <button type="submit" class="btn">Delete Resume</button>
+            </form>
+        </div>
 
         <div class="generate-resume">
             <a href="/resume" class="btn">Generate New Resume</a>
