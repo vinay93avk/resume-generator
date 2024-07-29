@@ -133,7 +133,7 @@ router.get('/show_resume', (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.status(404).send('No resume found');
+      return res.render('show_resume', { pdfUrl: null, comments: [], resumeId: null });
     }
 
     const resumeData = results[0];
@@ -142,7 +142,6 @@ router.get('/show_resume', (req, res) => {
     res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId });
   });
 });
-
 
 
 router.get('/admin_dashboard', (req, res) => {
@@ -1230,7 +1229,7 @@ router.post('/delete_resume/:id', (req, res) => {
       return res.status(500).send('Error deleting resume');
     }
 
-    res.redirect('/resumes'); // Redirect to a list of resumes or dashboard
+    res.redirect('/show_resume'); // Redirect to show_resume after deletion
   });
 });
 
