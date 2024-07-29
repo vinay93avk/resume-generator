@@ -27,7 +27,7 @@
     <% } else { %>
         <iframe src="<%= pdfUrl %>" width="100%" height="600px"></iframe>
 
-        <% if (comments.length > 0) { %>
+        <% if (comments && comments.length > 0) { %>
         <div class="comments-section">
             <h3>Admin Comments</h3>
             <ul>

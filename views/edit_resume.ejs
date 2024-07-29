@@ -1,4 +1,3 @@
-<!-- edit_resume.ejs -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Resume</title>
     <link rel="stylesheet" href="/styles.css">
+    <script>
+        function addCertificate() {
+            const container = document.getElementById("certificates-container");
+            const certificateDiv = document.createElement("div");
+            certificateDiv.innerHTML = `
+                <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
+                <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
+                <input type="date" name="issue_date[]" placeholder="Issue Date" required><br>
+                <input type="date" name="expiration_date[]" placeholder="Expiration Date" required><br>
+            `;
+            container.appendChild(certificateDiv);
+        }
+
+        function addEducation() {
+            const container = document.getElementById("education-container");
+            const educationDiv = document.createElement("div");
+            educationDiv.innerHTML = `
+                <input type="text" name="degree[]" placeholder="Degree" required><br>
+                <input type="text" name="institution[]" placeholder="Institution" required><br>
+                <input type="date" name="startDate[]" placeholder="Start Date" required><br>
+                <input type="date" name="endDate[]" placeholder="End Date" required><br>
+            `;
+            container.appendChild(educationDiv);
+        }
+
+        function addExperience() {
+            const container = document.getElementById("experience-container");
+            const experienceDiv = document.createElement("div");
+            experienceDiv.innerHTML = `
+                <input type="text" name="company_name[]" placeholder="Company Name" required><br>
+                <input type="text" name="role[]" placeholder="Role" required><br>
+                <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" required><br>
+                <input type="date" name="experience_end_date[]" placeholder="Experience End Date" required><br>
+                <textarea name="description[]" placeholder="Experience Description" required></textarea><br>
+            `;
+            container.appendChild(experienceDiv);
+        }
+
+        function addProject() {
+            const container = document.getElementById("projects-container");
+            const projectDiv = document.createElement("div");
+            projectDiv.innerHTML = `
+                <input type="text" name="project_name[]" placeholder="Project Name" required><br>
+                <input type="url" name="github_link[]" placeholder="GitHub Link" required><br>
+            `;
+            container.appendChild(projectDiv);
+        }
+    </script>
 </head>
 <body>
     <header>
@@ -18,14 +65,88 @@
     <div class="container">
         <h2>Edit Your Resume</h2>
         <form action="/edit_resume/<%= resume.id %>" method="post">
-            <!-- Populate fields with existing resume data -->
-            <input type="text" name="firstName" value="<%= resume.firstName %>" required><br>
-            <input type="text" name="lastName" value="<%= resume.lastName %>" required><br>
-            <input type="email" name="email" value="<%= resume.email %>" required><br>
-            <input type="text" name="phone" value="<%= resume.phone %>" required><br>
-            
-            <!-- Add other fields as needed -->
-            
+            <section>
+                <h3>Personal Information <span class="required-indicator">*</span></h3>
+                <input type="text" name="firstName" value="<%= resume.firstName %>" required><br>
+                <input type="text" name="lastName" value="<%= resume.lastName %>" required><br>
+                <input type="email" name="email" value="<%= resume.email %>" required><br>
+                <input type="text" name="phone" value="<%= resume.phone %>" required><br>
+            </section>
+
+            <section>
+                <h3>Education <span class="required-indicator">*</span></h3>
+                <div id="education-container">
+                    <% resume.education.forEach(function(edu) { %>
+                        <div>
+                            <input type="text" name="degree[]" placeholder="Degree" value="<%= edu.degree %>" required><br>
+                            <input type="text" name="institution[]" placeholder="Institution" value="<%= edu.institution %>" required><br>
+                            <input type="date" name="startDate[]" placeholder="Start Date" value="<%= edu.startDate %>" required><br>
+                            <input type="date" name="endDate[]" placeholder="End Date" value="<%= edu.endDate %>" required><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addEducation()">Add Another Education</button><br><br>
+            </section>
+
+            <section>
+                <h3>LinkedIn <span class="required-indicator">*</span></h3>
+                <input type="text" name="linkedUrl" value="<%= resume.linkedUrl %>" placeholder="LinkedIn URL"><br>
+            </section>
+
+            <section>
+                <h3>Projects <span class="required-indicator">*</span></h3>
+                <div id="projects-container">
+                    <% resume.projects.forEach(function(project) { %>
+                        <div>
+                            <input type="text" name="project_name[]" placeholder="Project Name" value="<%= project.project_name %>" required><br>
+                            <input type="url" name="github_link[]" placeholder="GitHub Link" value="<%= project.github_link %>" required><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addProject()">Add Another Project</button><br><br>
+            </section>
+
+            <section>
+                <h3>Experience <span class="required-indicator">*</span></h3>
+                <div id="experience-container">
+                    <% resume.experience.forEach(function(exp) { %>
+                        <div>
+                            <input type="text" name="company_name[]" placeholder="Company Name" value="<%= exp.company_name %>" required><br>
+                            <input type="text" name="role[]" placeholder="Role" value="<%= exp.role %>" required><br>
+                            <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" value="<%= exp.startDate %>" required><br>
+                            <input type="date" name="experience_end_date[]" placeholder="Experience End Date" value="<%= exp.endDate %>" required><br>
+                            <textarea name="description[]" placeholder="Experience Description" required><%= exp.description %></textarea><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addExperience()">Add Another Experience</button><br><br>
+            </section>
+
+            <section>
+                <h3>Skills <span class="required-indicator">*</span></h3>
+                <input type="text" name="skills" placeholder="Skills (format: skill:proficiency_level, ...)" value="<%= resume.skills %>" required><br>
+            </section>
+
+            <section>
+                <h3>Job Description <span class="required-indicator">*</span></h3>
+                <textarea name="jobDescription" placeholder="Job Description" required><%= resume.jobDescription %></textarea><br>
+            </section>
+
+            <section>
+                <h3>Certificates <span class="required-indicator">*</span></h3>
+                <div id="certificates-container">
+                    <% resume.certificates.forEach(function(cert) { %>
+                        <div>
+                            <input type="text" name="certificate_name[]" placeholder="Certificate Name" value="<%= cert.certificate_name %>" required><br>
+                            <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" value="<%= cert.issuing_organization %>" required><br>
+                            <input type="date" name="issue_date[]" placeholder="Issue Date" value="<%= cert.issue_date %>" required><br>
+                            <input type="date" name="expiration_date[]" placeholder="Expiration Date" value="<%= cert.expiration_date %>" required><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addCertificate()">Add Another Certificate</button><br><br>
+            </section>
+
             <input type="submit" value="Update Resume">
         </form>
     </div>
