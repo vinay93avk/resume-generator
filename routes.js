@@ -1278,17 +1278,6 @@ router.post('/edit_resume/:id', async (req, res) => {
   const parsedProjects = parseProjects(project_name, github_link);
 
   try {
-    // Generate experience points for each experience entry
-    const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, description, skills)));
-
-    // Add generated experience points to each experience entry
-    parsedExperience.forEach((exp, index) => {
-      exp.full_description = exp.description; // Store the user input in full_description
-      if (experiencePointsArray[index]) {
-        exp.description = experiencePointsArray[index].join('; '); // Use the generated description
-      }
-    });
-
     connection.beginTransaction(async (err) => {
       if (err) {
         console.error('Error starting transaction:', err);
@@ -1317,7 +1306,7 @@ router.post('/edit_resume/:id', async (req, res) => {
         const insertQueries = [
           { query: 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?', values: parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]) },
           { query: 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?', values: parsedProjects.map(project => [user.id, project.project_name, project.github_link]) },
-          { query: 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description, email) VALUES ?', values: parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, exp.full_description, email]) },
+          { query: 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description, email) VALUES ?', values: parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, exp.description, email]) },
           { query: 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?', values: parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]) }
         ];
 
@@ -1345,14 +1334,11 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Generate the updated PDF
+        // Upload the updated PDF to S3
         const html = await ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
           firstName, lastName, email, phone, linkedUrl, skills,
           education: parsedEducation,
-          experience: parsedExperience.map(exp => ({
-            ...exp,
-            description: typeof exp.description === 'string' ? exp.description.split('; ').map(point => point.trim() + '.').filter(point => point.length > 1) : exp.description
-          })),
+          experience: parsedExperience,
           certificates: parsedCertificates,
           projects: parsedProjects,
           pdf: true
@@ -1364,7 +1350,6 @@ router.post('/edit_resume/:id', async (req, res) => {
         const pdfBuffer = await page.pdf({ format: 'A4' });
         await browser.close();
 
-        // Upload the updated PDF to S3
         const s3Params = {
           Bucket: 'resume-generator-ocu', // Replace with your S3 bucket name
           Key: `resumes/${user.id}-${Date.now()}.pdf`, // Unique key for the resume
@@ -1407,8 +1392,6 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 });
 
-
-// Handle resume deletion
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
   const resumeId = req.params.id;
