@@ -38,7 +38,7 @@
                 <input type="text" name="role[]" placeholder="Role" required><br>
                 <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" required><br>
                 <input type="date" name="experience_end_date[]" placeholder="Experience End Date" required><br>
-                <textarea name="description[]" placeholder="Experience Description" required><%= exp.description %></textarea><br>
+                <textarea name="description[]" placeholder="Experience Description" required></textarea><br>
             `;
             container.appendChild(experienceDiv);
         }
@@ -115,12 +115,12 @@
                             <input type="text" name="role[]" placeholder="Role" value="<%= exp.role %>" required><br>
                             <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" value="<%= exp.start_date %>" required><br>
                             <input type="date" name="experience_end_date[]" placeholder="Experience End Date" value="<%= exp.end_date %>" required><br>
-                            <textarea name="description[]" placeholder="Experience Description" required><%= exp.description %></textarea><br>
+                            <textarea name="description[]" placeholder="Experience Description" required><%= exp.description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') %></textarea><br>
                         </div>
                     <% }); %>
                 </div>
                 <button type="button" onclick="addExperience()">Add Another Experience</button><br><br>
-            </section>            
+            </section>
 
             <section>
                 <h3>Skills <span class="required-indicator">*</span></h3>
