@@ -1264,7 +1264,13 @@ router.get('/edit_resume/:id', (req, res) => {
 
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
-  const { firstName, lastName, email, phone } = req.session.user;
+  const user = req.session.user; // Retrieve user from session
+
+  if (!user || !user.id) {
+    return res.status(403).send('User not authenticated or session expired');
+  }
+
+  const { firstName, lastName, email, phone } = user; // Destructure user details
   const { skills, linkedUrl } = req.body;
 
   try {
@@ -1307,7 +1313,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           GROUP BY resumes.id
         `;
 
-        connection.query(query, [resumeId, req.session.user.id], (error, results) => {
+        connection.query(query, [resumeId, user.id], (error, results) => {
           if (error) {
             console.error('Error fetching updated resume details:', error);
             return res.status(500).send('Error fetching updated resume details');
@@ -1431,6 +1437,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+
 
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
