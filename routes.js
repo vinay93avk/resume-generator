@@ -1261,7 +1261,6 @@ router.get('/edit_resume/:id', (req, res) => {
 });
 
 
-
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
   const user = req.session.user;
@@ -1271,7 +1270,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
+  const { skills, linkedUrl } = req.body;
 
   try {
     connection.beginTransaction(async (err) => {
@@ -1281,7 +1280,7 @@ router.post('/edit_resume/:id', async (req, res) => {
       }
 
       try {
-        // Parse skills and other fields
+        // Parse skills
         const parsedSkills = parseSkills(skills);
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
@@ -1296,108 +1295,6 @@ router.post('/edit_resume/:id', async (req, res) => {
               return reject(err);
             }
             resolve();
-          });
-        });
-
-        // Update other tables similarly: Education, Experience, Certificates, Projects
-
-        // Update Education
-        const parsedEducation = parseEducation(education);
-        await new Promise((resolve, reject) => {
-          const deleteEducationQuery = 'DELETE FROM Education WHERE user_id = ?';
-          connection.query(deleteEducationQuery, [user.id], (err) => {
-            if (err) {
-              console.error('Error deleting education:', err);
-              return reject(err);
-            }
-            if (parsedEducation.length) {
-              const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date) VALUES ?';
-              const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date]);
-              connection.query(insertEducationQuery, [educationValues], (err) => {
-                if (err) {
-                  console.error('Error inserting education:', err);
-                  return reject(err);
-                }
-                resolve();
-              });
-            } else {
-              resolve();
-            }
-          });
-        });
-
-        // Update Experience
-        const parsedExperience = parseExperience(experience);
-        await new Promise((resolve, reject) => {
-          const deleteExperienceQuery = 'DELETE FROM Experience WHERE user_id = ?';
-          connection.query(deleteExperienceQuery, [user.id], (err) => {
-            if (err) {
-              console.error('Error deleting experience:', err);
-              return reject(err);
-            }
-            if (parsedExperience.length) {
-              const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES ?';
-              const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description]);
-              connection.query(insertExperienceQuery, [experienceValues], (err) => {
-                if (err) {
-                  console.error('Error inserting experience:', err);
-                  return reject(err);
-                }
-                resolve();
-              });
-            } else {
-              resolve();
-            }
-          });
-        });
-
-        // Update Certificates
-        const parsedCertificates = parseCertificates(certificates);
-        await new Promise((resolve, reject) => {
-          const deleteCertificatesQuery = 'DELETE FROM Certificates WHERE user_id = ?';
-          connection.query(deleteCertificatesQuery, [user.id], (err) => {
-            if (err) {
-              console.error('Error deleting certificates:', err);
-              return reject(err);
-            }
-            if (parsedCertificates.length) {
-              const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES ?';
-              const certificatesValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date]);
-              connection.query(insertCertificatesQuery, [certificatesValues], (err) => {
-                if (err) {
-                  console.error('Error inserting certificates:', err);
-                  return reject(err);
-                }
-                resolve();
-              });
-            } else {
-              resolve();
-            }
-          });
-        });
-
-        // Update Projects
-        const parsedProjects = parseProjects(projects);
-        await new Promise((resolve, reject) => {
-          const deleteProjectsQuery = 'DELETE FROM Projects WHERE user_id = ?';
-          connection.query(deleteProjectsQuery, [user.id], (err) => {
-            if (err) {
-              console.error('Error deleting projects:', err);
-              return reject(err);
-            }
-            if (parsedProjects.length) {
-              const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?';
-              const projectsValues = parsedProjects.map(proj => [user.id, proj.project_name, proj.github_link]);
-              connection.query(insertProjectsQuery, [projectsValues], (err) => {
-                if (err) {
-                  console.error('Error inserting projects:', err);
-                  return reject(err);
-                }
-                resolve();
-              });
-            } else {
-              resolve();
-            }
           });
         });
 
@@ -1435,7 +1332,7 @@ router.post('/edit_resume/:id', async (req, res) => {
 
           resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
             let [project_name, github_link] = proj.split(':');
-            if (!github_link.startsWith('http://') && !github_link.startsWith('https://')) {
+            if (github_link && !github_link.startsWith('http://') && !github_link.startsWith('https://')) {
               github_link = 'https://' + github_link; // Default to https
             }
             return { project_name, github_link };
@@ -1565,7 +1462,6 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
-
 
 
 
