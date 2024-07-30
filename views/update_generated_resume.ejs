@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Updated Resume</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/resume_styles.css">
 </head>
 <body>
-    <div class="resume">
+    <div class="resume-container">
         <h1><%= firstName %> <%= lastName %></h1>
         <p>Email: <%= email %></p>
         <p>Phone: <%= phone %></p>
-        <p>LinkedIn: <%= linkedUrl %></p>
+        <p>LinkedIn: <a href="<%= linkedUrl %>" target="_blank"><%= linkedUrl %></a></p>
 
         <h2>Skills</h2>
         <ul>
