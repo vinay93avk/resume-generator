@@ -54,7 +54,6 @@
         </ul>
         
         <% if (typeof pdf === 'undefined' || !pdf) { %>
-        <a href="<%= downloadUrl %>" class="download-btn">Download PDF</a>
         <div class="actions">
             <form action="/edit_resume/<%= resumeId %>" method="get">
                 <button type="submit" class="btn edit-btn">Edit Resume</button>
