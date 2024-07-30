@@ -1294,7 +1294,28 @@ router.post('/edit_resume/:id', (req, res) => {
             // After clearing, reinsert the data
             const educationValues = degree.map((d, index) => [userId, d, institution[index], startDate[index], endDate[index]]);
             const projectsValues = project_name.map((p, index) => [userId, p, github_link[index]]);
-            const experienceValues = company_name.map((c, index) => [userId, c, role[index], experience_start_date[index], experience_end_date[index], description[index], full_description[index]]);
+
+            // Check for undefined or unequal lengths in the experience data
+            if (!company_name || !role || !experience_start_date || !experience_end_date || !description || !full_description ||
+                company_name.length !== role.length ||
+                role.length !== experience_start_date.length ||
+                experience_start_date.length !== experience_end_date.length ||
+                experience_end_date.length !== description.length ||
+                description.length !== full_description.length) {
+              console.error('Experience data arrays are undefined or of unequal lengths');
+              return connection.rollback(() => res.status(500).send('Invalid experience data'));
+            }
+
+            const experienceValues = company_name.map((c, index) => [
+              userId, 
+              c, 
+              role[index], 
+              experience_start_date[index], 
+              experience_end_date[index], 
+              description[index], 
+              full_description[index]
+            ]);
+
             const certificatesValues = certificate_name.map((c, index) => [userId, c, issuing_organization[index], issue_date[index], expiration_date[index]]);
 
             const insertDataQueries = [
@@ -1362,6 +1383,7 @@ router.post('/edit_resume/:id', (req, res) => {
     });
   });
 });
+
 
 
 
