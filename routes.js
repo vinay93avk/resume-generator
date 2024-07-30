@@ -1254,28 +1254,12 @@ router.get('/edit_resume/:id', (req, res) => {
 
 
 
-// Route to handle the submission of the edited resume
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
   const { firstName, lastName, email, phone } = req.session.user;
-  const {
-    degree, institution, startDate, endDate, company_name, role, experience_start_date,
-    experience_end_date, description, skills, linkedUrl, certificate_name,
-    issuing_organization, issue_date, expiration_date, project_name, github_link
-  } = req.body;
 
-  if (!firstName || !lastName || !email || !phone) {
-    return res.status(400).send('All fields are required');
-  }
-
-  const user = req.session.user;
-
-  // Parsing all sections
-  const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-  const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-  const parsedSkills = parseSkills(skills);
-  const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
-  const parsedProjects = parseProjects(project_name, github_link);
+  // Use data from the request body (this could be from a form submission)
+  const { skills, linkedUrl } = req.body;
 
   try {
     connection.beginTransaction(async (err) => {
@@ -1285,47 +1269,10 @@ router.post('/edit_resume/:id', async (req, res) => {
       }
 
       try {
-        // Clear existing data
-        const deleteQueries = [
-          'DELETE FROM Education WHERE user_id = ?',
-          'DELETE FROM Projects WHERE user_id = ?',
-          'DELETE FROM Experience WHERE user_id = ?',
-          'DELETE FROM Certificates WHERE user_id = ?'
-        ];
-
-        for (let query of deleteQueries) {
-          await new Promise((resolve, reject) => {
-            connection.query(query, [user.id], (err) => {
-              if (err) return reject(err);
-              resolve();
-            });
-          });
-        }
-
-        // Insert updated data
-        const insertQueries = [
-          { query: 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?', values: parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]) },
-          { query: 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?', values: parsedProjects.map(project => [user.id, project.project_name, project.github_link]) },
-          { query: 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description, email) VALUES ?', values: parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, exp.description, email]) },
-          { query: 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?', values: parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]) }
-        ];
-
-        for (let { query, values } of insertQueries) {
-          if (values.length > 0) {
-            await new Promise((resolve, reject) => {
-              connection.query(query, [values], (err) => {
-                if (err) return reject(err);
-                resolve();
-              });
-            });
-          }
-        }
-
         // Update resume data
-        const updateResumeQuery = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ?, education = ?, experience = ?, skills = ?, linkedUrl = ? WHERE id = ?';
-        const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
-        const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
-        const resumeValues = [firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills.join(', '), linkedUrl, resumeId];
+        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
+        const skillsString = skills.join(', '); // Assuming skills is an array of strings
+        const resumeValues = [skillsString, linkedUrl, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
@@ -1334,51 +1281,127 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Upload the updated PDF to S3
-        const html = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
-          firstName, lastName, email, phone, linkedUrl, skills: parsedSkills,
-          education: parsedEducation,
-          experience: parsedExperience,
-          certificates: parsedCertificates,
-          projects: parsedProjects,
-          pdf: true
-        });
+        // Fetch updated resume data
+        const query = `
+          SELECT resumes.*, 
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
+          FROM resumes
+          LEFT JOIN Education e ON resumes.user_id = e.user_id
+          LEFT JOIN Projects p ON resumes.user_id = p.user_id
+          LEFT JOIN Experience exp ON resumes.user_id = exp.user_id
+          LEFT JOIN Certificates c ON resumes.user_id = c.user_id
+          WHERE resumes.id = ? AND resumes.user_id = ?
+          GROUP BY resumes.id
+        `;
 
-        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-        const pdfBuffer = await page.pdf({ format: 'A4' });
-        await browser.close();
-
-        const s3Params = {
-          Bucket: 'resume-generator-ocu', // Replace with your S3 bucket name
-          Key: `resumes/${user.id}-${Date.now()}.pdf`, // Unique key for the resume
-          Body: pdfBuffer,
-          ContentType: 'application/pdf'
-        };
-
-        s3.upload(s3Params, async (s3Error, data) => {
-          if (s3Error) {
-            console.error('Error uploading updated PDF to S3:', s3Error);
-            return res.status(500).send('Error uploading updated PDF to S3');
+        connection.query(query, [resumeId, req.session.user.id], (error, results) => {
+          if (error) {
+            console.error('Error fetching updated resume details:', error);
+            return res.status(500).send('Error fetching updated resume details');
           }
 
-          // Update the S3 URL in the database
-          const updateS3UrlQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
-          connection.query(updateS3UrlQuery, [data.Location, resumeId], (updateErr) => {
-            if (updateErr) {
-              console.error('Error updating S3 URL in database:', updateErr);
-              return res.status(500).send('Error updating S3 URL in database');
+          if (results.length === 0) {
+            return res.status(404).send('Resume not found');
+          }
+
+          const resume = results[0];
+          resume.education = resume.education ? resume.education.split(';;').map(edu => {
+            const [degree, institution, start_date, end_date] = edu.split(':');
+            return { degree, institution, start_date, end_date };
+          }) : [];
+
+          resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
+            const [project_name, github_link] = proj.split(':');
+            return { project_name, github_link };
+          }) : [];
+
+          resume.experience = resume.experience ? resume.experience.split(';;').map(exp => {
+            const [company_name, role, start_date, end_date, description] = exp.split(':');
+            return { company_name, role, start_date, end_date, description };
+          }) : [];
+
+          resume.certificates = resume.certificates ? resume.certificates.split(';;').map(cert => {
+            const [certificate_name, issuing_organization, issue_date, expiration_date] = cert.split(':');
+            return { certificate_name, issuing_organization, issue_date, expiration_date };
+          }) : [];
+
+          // Render the resume to HTML for the web view
+          ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+            firstName,
+            lastName,
+            email,
+            phone,
+            linkedUrl,
+            skills: skillsString,
+            education: resume.education,
+            experience: resume.experience,
+            certificates: resume.certificates,
+            projects: resume.projects,
+            pdf: false  // Indicate that this is for web rendering
+          }, async (err, html) => {
+            if (err) {
+              console.error('Error rendering resume HTML:', err);
+              return res.status(500).send('Error rendering resume HTML');
             }
 
-            // Commit the transaction
-            connection.commit((commitErr) => {
-              if (commitErr) {
-                return connection.rollback(() => res.status(500).send('Error committing transaction'));
-              }
-              console.log('Updated resume uploaded to S3:', data.Location);
-              res.redirect('/show_resume'); // Redirect to the page where the user can view the updated resume
-            });
+            try {
+              // Render the resume to HTML for PDF generation
+              const pdfHtml = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                firstName,
+                lastName,
+                email,
+                phone,
+                linkedUrl,
+                skills: skillsString,
+                education: resume.education,
+                experience: resume.experience,
+                certificates: resume.certificates,
+                projects: resume.projects,
+                pdf: true  // Indicate that this is for PDF generation
+              });
+
+              // Generate PDF from HTML
+              const browser = await puppeteer.launch({
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+              });
+              const page = await browser.newPage();
+              await page.setContent(pdfHtml, { waitUntil: 'networkidle0' });
+
+              const pdfBuffer = await page.pdf({ format: 'A4' });
+              await browser.close();
+
+              // Upload PDF to S3
+              const s3Params = {
+                Bucket: 'resume-generator-ocu', // Replace with your S3 bucket name
+                Key: `resumes/${user.id}-${Date.now()}.pdf`,
+                Body: pdfBuffer,
+                ContentType: 'application/pdf'
+              };
+
+              s3.upload(s3Params, (s3Err, data) => {
+                if (s3Err) {
+                  console.error('Error uploading PDF to S3:', s3Err);
+                  return res.status(500).send('Error uploading PDF to S3');
+                }
+
+                // Update the resumes table with the S3 URL
+                const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
+                  if (updateErr) {
+                    console.error('Error updating resume with S3 URL:', updateErr);
+                    return res.status(500).send('Error updating resume with S3 URL');
+                  }
+
+                  res.redirect('/show_resume'); // Redirect to the page where the user can view the updated resume
+                });
+              });
+            } catch (error) {
+              console.error('Error generating PDF:', error);
+              res.status(500).send('Error generating PDF');
+            }
           });
         });
       } catch (transactionError) {
