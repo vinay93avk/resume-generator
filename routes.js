@@ -452,7 +452,8 @@ router.post('/generate_resume', async (req, res) => {
         certificates: parsedCertificates,
         projects: parsedProjects, // Include projects
         pdf: false,  // Indicate that this is for web rendering
-        downloadUrl: ''  // Provide an empty default value for web rendering
+        downloadUrl: '',  // Provide an empty default value for web rendering
+        resumeId: resumeId
       }, async (err, html) => {
         if (err) {
           console.error('Error rendering resume HTML:', err);
