@@ -354,7 +354,10 @@ router.post('/generate_resume', async (req, res) => {
 
     // Add generated experience points to each experience entry
     parsedExperience.forEach((exp, index) => {
-      exp.description = experiencePointsArray[index].join('; '); // Ensure it's a string
+      exp.full_description = exp.description; // Store the user input in full_description
+      if (experiencePointsArray[index]) {
+        exp.description = experiencePointsArray[index].join('; '); // Replace this if your implementation of description involves experience points
+      }
     });
 
     // Inserting Education
@@ -368,24 +371,24 @@ router.post('/generate_resume', async (req, res) => {
     });
 
     // Inserting Experience
-    // Inserting Experience
-      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, full_description, email) VALUES ?';
-      const experienceValues = parsedExperience.map(exp => [
-        user.id, 
-        exp.company_name, 
-        exp.role, 
-        exp.start_date, 
-        exp.end_date, 
-        exp.full_description, // Use the full_description instead of description
-        email
-      ]);
-
-      connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
-        if (error) {
-          console.error('Error saving experience:', error);
-          return res.status(500).send('Error saving experience');
-        }
-      });
+    const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description, email) VALUES ?';
+    const experienceValues = parsedExperience.map(exp => [
+      user.id,
+      exp.company_name,
+      exp.role,
+      exp.start_date,
+      exp.end_date,
+      exp.description, // Summary or generated description
+      exp.full_description, // Full user-provided description
+      email
+    ]);
+    
+    connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
+      if (error) {
+        console.error('Error saving experience:', error);
+        return res.status(500).send('Error saving experience');
+      }
+    });
 
 
     // Inserting Skills
