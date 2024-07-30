@@ -1256,11 +1256,15 @@ router.get('/edit_resume/:id', (req, res) => {
 
 
 // Handle resume update
-// Handle resume update
 router.post('/edit_resume/:id', (req, res) => {
   const resumeId = req.params.id;
   const userId = req.session.user.id;
-  const { firstName, lastName, email, phone, degree, institution, startDate, endDate, project_name, github_link, company_name, role, experience_start_date, experience_end_date, description, skills, certificate_name, issuing_organization, issue_date, expiration_date, linkedUrl } = req.body;
+  const {
+    firstName, lastName, email, phone, degree, institution, startDate, endDate,
+    project_name, github_link, company_name, role, experience_start_date, experience_end_date,
+    description, full_description, skills, certificate_name, issuing_organization,
+    issue_date, expiration_date, linkedUrl
+  } = req.body;
 
   // Update the resumes table with the basic information
   const updateResumeQuery = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ?, linkedUrl = ?, skills = ? WHERE id = ? AND user_id = ?';
@@ -1290,13 +1294,13 @@ router.post('/edit_resume/:id', (req, res) => {
             // After clearing, reinsert the data
             const educationValues = degree.map((d, index) => [userId, d, institution[index], startDate[index], endDate[index]]);
             const projectsValues = project_name.map((p, index) => [userId, p, github_link[index]]);
-            const experienceValues = company_name.map((c, index) => [userId, c, role[index], experience_start_date[index], experience_end_date[index], description[index]]);
+            const experienceValues = company_name.map((c, index) => [userId, c, role[index], experience_start_date[index], experience_end_date[index], description[index], full_description[index]]);
             const certificatesValues = certificate_name.map((c, index) => [userId, c, issuing_organization[index], issue_date[index], expiration_date[index]]);
 
             const insertDataQueries = [
               { query: 'INSERT INTO Education (user_id, degree, institution, start_date, end_date) VALUES ?', values: educationValues },
               { query: 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?', values: projectsValues },
-              { query: 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES ?', values: experienceValues },
+              { query: 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description) VALUES ?', values: experienceValues },
               { query: 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES ?', values: certificatesValues }
             ];
 
@@ -1315,7 +1319,7 @@ router.post('/edit_resume/:id', (req, res) => {
                           firstName, lastName, email, phone, linkedUrl, skills,
                           education: educationValues.map(([_, degree, institution, startDate, endDate]) => ({ degree, institution, start_date: startDate, end_date: endDate })),
                           projects: projectsValues.map(([_, project_name, github_link]) => ({ project_name, github_link })),
-                          experience: experienceValues.map(([_, company_name, role, startDate, endDate, description]) => ({ company_name, role, start_date: startDate, end_date: endDate, description })),
+                          experience: experienceValues.map(([_, company_name, role, startDate, endDate, description, full_description]) => ({ company_name, role, start_date: startDate, end_date: endDate, description, full_description })),
                           certificates: certificatesValues.map(([_, certificate_name, issuing_organization, issue_date, expiration_date]) => ({ certificate_name, issuing_organization, issue_date, expiration_date })),
                           pdf: true
                         });
