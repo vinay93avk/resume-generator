@@ -1340,6 +1340,7 @@ router.post('/edit_resume/:id', async (req, res) => {
             return { certificate_name, issuing_organization, issue_date, expiration_date };
           }) : [];
 
+          // Render the resume to HTML for the web view
           ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
             firstName,
             lastName,
@@ -1359,6 +1360,7 @@ router.post('/edit_resume/:id', async (req, res) => {
             }
 
             try {
+              // Render the resume to HTML for PDF generation
               const pdfHtml = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
                 firstName,
                 lastName,
@@ -1373,6 +1375,7 @@ router.post('/edit_resume/:id', async (req, res) => {
                 pdf: true  // Indicate that this is for PDF generation
               });
 
+              // Generate PDF from HTML
               const browser = await puppeteer.launch({
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
               });
@@ -1382,6 +1385,7 @@ router.post('/edit_resume/:id', async (req, res) => {
               const pdfBuffer = await page.pdf({ format: 'A4' });
               await browser.close();
 
+              // Upload PDF to S3
               const s3Params = {
                 Bucket: 'resume-generator-ocu',
                 Key: `resumes/${user.id}-${Date.now()}.pdf`,
@@ -1395,6 +1399,7 @@ router.post('/edit_resume/:id', async (req, res) => {
                   return res.status(500).send('Error uploading PDF to S3');
                 }
 
+                // Update the resumes table with the S3 URL
                 const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
                 connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
                   if (updateErr) {
@@ -1402,33 +1407,33 @@ router.post('/edit_resume/:id', async (req, res) => {
                     return res.status(500).send('Error updating resume with S3 URL');
                   }
 
-                  connection.commit((commitErr) => {
-                    if (commitErr) {
-                      console.error('Error committing transaction:', commitErr);
-                      return connection.rollback(() => res.status(500).send('Error committing transaction'));
+                  // Render the final resume view with the download link
+                  ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    linkedUrl,
+                    skills: parsedSkills,
+                    education: resume.education,
+                    experience: resume.experience,
+                    certificates: resume.certificates,
+                    projects: resume.projects,
+                    downloadUrl: data.Location, // Set the download URL for the PDF
+                    pdf: false  // For the web view
+                  }, (renderErr, finalHtml) => {
+                    if (renderErr) {
+                      console.error('Error rendering final HTML:', renderErr);
+                      return res.status(500).send('Error rendering final HTML');
                     }
 
-                    // Here we set the downloadUrl with data.Location and pass it to the template
-                    ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
-                      firstName,
-                      lastName,
-                      email,
-                      phone,
-                      linkedUrl,
-                      skills: parsedSkills,
-                      education: resume.education,
-                      experience: resume.experience,
-                      certificates: resume.certificates,
-                      projects: resume.projects,
-                      downloadUrl: data.Location, // Pass the S3 URL for downloading
-                      pdf: false
-                    }, (renderErr, finalHtml) => {
-                      if (renderErr) {
-                        console.error('Error rendering final HTML:', renderErr);
-                        return res.status(500).send('Error rendering final HTML');
+                    connection.commit((commitErr) => {
+                      if (commitErr) {
+                        console.error('Error committing transaction:', commitErr);
+                        return connection.rollback(() => res.status(500).send('Error committing transaction'));
                       }
 
-                      res.send(finalHtml);
+                      res.send(finalHtml); // Send the final HTML response
                     });
                   });
                 });
@@ -1449,6 +1454,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+
 
 
 
