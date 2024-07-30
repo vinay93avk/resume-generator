@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Updated Resume</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="resume">
+        <h1><%= firstName %> <%= lastName %></h1>
+        <p>Email: <%= email %></p>
+        <p>Phone: <%= phone %></p>
+        <p>LinkedIn: <%= linkedUrl %></p>
+
+        <h2>Skills</h2>
+        <ul>
+            <% if (Array.isArray(skills) && skills.length > 0) { %>
+                <% skills.forEach(function(skill) { %>
+                    <li><%= skill.skill_name %> - <%= skill.proficiency_level %></li>
+                <% }); %>
+            <% } else { %>
+                <p>No skills listed.</p>
+            <% } %>
+        </ul>
+
+        <h2>Experience</h2>
+        <ul>
+            <% if (Array.isArray(experience) && experience.length > 0) { %>
+                <% experience.forEach(function(exp) { %>
+                    <li><%= exp.role %> at <%= exp.company_name %> (<%= exp.start_date %> to <%= exp.end_date %>): <%= exp.description %></li>
+                <% }); %>
+            <% } else { %>
+                <p>No experience listed.</p>
+            <% } %>
+        </ul>
+
+        <h2>Education</h2>
+        <ul>
+            <% if (Array.isArray(education) && education.length > 0) { %>
+                <% education.forEach(function(edu) { %>
+                    <li><%= edu.degree %> from <%= edu.institution %> (<%= edu.start_date %> to <%= edu.end_date %>)</li>
+                <% }); %>
+            <% } else { %>
+                <p>No education listed.</p>
+            <% } %>
+        </ul>
+
+        <h2>Certificates</h2>
+        <ul>
+            <% if (Array.isArray(certificates) && certificates.length > 0) { %>
+                <% certificates.forEach(function(cert) { %>
+                    <li><%= cert.certificate_name %> from <%= cert.issuing_organization %> (<%= cert.issue_date %> to <%= cert.expiration_date %>)</li>
+                <% }); %>
+            <% } else { %>
+                <p>No certificates listed.</p>
+            <% } %>
+        </ul>
+
+        <h2>Projects</h2>
+        <ul>
+            <% if (Array.isArray(projects) && projects.length > 0) { %>
+                <% projects.forEach(function(project) { %>
+                    <li><%= project.project_name %>: <a href="<%= project.github_link %>"><%= project.github_link %></a></li>
+                <% }); %>
+            <% } else { %>
+                <p>No projects listed.</p>
+            <% } %>
+        </ul>
+    </div>
+</body>
+</html>

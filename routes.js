@@ -1325,7 +1325,7 @@ router.post('/edit_resume/:id', async (req, res) => {
         const updateResumeQuery = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ?, education = ?, experience = ?, skills = ?, linkedUrl = ? WHERE id = ?';
         const educationDescription = parsedEducation.map(edu => `${edu.degree} from ${edu.institution} (${edu.start_date} to ${edu.end_date})`).join('; ');
         const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
-        const resumeValues = [firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl, resumeId];
+        const resumeValues = [firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills.join(', '), linkedUrl, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
@@ -1335,8 +1335,8 @@ router.post('/edit_resume/:id', async (req, res) => {
         });
 
         // Upload the updated PDF to S3
-        const html = await ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
-          firstName, lastName, email, phone, linkedUrl, skills,
+        const html = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+          firstName, lastName, email, phone, linkedUrl, skills: parsedSkills,
           education: parsedEducation,
           experience: parsedExperience,
           certificates: parsedCertificates,
