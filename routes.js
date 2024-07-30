@@ -1206,16 +1206,17 @@ router.get('/edit_resume/:id', (req, res) => {
           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
           GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
           GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
-          GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates,
+          GROUP_CONCAT(DISTINCT s.skill_name ORDER BY s.skill_name SEPARATOR ', ') AS skills
     FROM resumes
     LEFT JOIN Education e ON resumes.user_id = e.user_id
     LEFT JOIN Projects p ON resumes.user_id = p.user_id
     LEFT JOIN Experience exp ON resumes.user_id = exp.user_id
     LEFT JOIN Certificates c ON resumes.user_id = c.user_id
+    LEFT JOIN Skills s ON resumes.user_id = s.user_id
     WHERE resumes.id = ? AND resumes.user_id = ?
     GROUP BY resumes.id
-`;
-
+  `;
 
   connection.query(query, [resumeId, userId], (error, results) => {
     if (error) {
@@ -1228,12 +1229,13 @@ router.get('/edit_resume/:id', (req, res) => {
     }
 
     const resume = results[0];
-    resume.education = resume.education ? resume.education.split(',').map(edu => {
+
+    resume.education = resume.education ? resume.education.split(';;').map(edu => {
       const [degree, institution, start_date, end_date] = edu.split(':');
       return { degree, institution, start_date, end_date };
     }) : [];
 
-    resume.projects = resume.projects ? resume.projects.split(',').map(proj => {
+    resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
       const [project_name, github_link] = proj.split(':');
       return { project_name, github_link };
     }) : [];
@@ -1243,14 +1245,18 @@ router.get('/edit_resume/:id', (req, res) => {
       return { company_name, role, start_date, end_date, description };
     }) : [];
 
-    resume.certificates = resume.certificates ? resume.certificates.split(',').map(cert => {
+    resume.certificates = resume.certificates ? resume.certificates.split(';;').map(cert => {
       const [certificate_name, issuing_organization, issue_date, expiration_date] = cert.split(':');
       return { certificate_name, issuing_organization, issue_date, expiration_date };
     }) : [];
 
+    // Ensuring skills is an array of strings
+    resume.skills = resume.skills ? resume.skills.split(',').map(skill => skill.trim()) : [];
+
     res.render('edit_resume', { resume });
   });
 });
+
 
 
 
