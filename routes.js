@@ -476,7 +476,8 @@ router.post('/generate_resume', async (req, res) => {
             linkedUrl,
             certificates: parsedCertificates,
             projects: parsedProjects, // Include projects
-            pdf: true  // Indicate that this is for PDF generation
+            pdf: true,
+            resumeId: resumeId  // Indicate that this is for PDF generation
           });
 
           // Generate PDF from HTML
@@ -531,7 +532,8 @@ router.post('/generate_resume', async (req, res) => {
                 certificates: parsedCertificates,
                 projects: parsedProjects, // Include projects
                 downloadUrl: data.Location,  // Provide the S3 URL for downloading
-                pdf: false // Set pdf to false for web rendering
+                pdf: false,
+                resumeId: resumeId // Set pdf to false for web rendering
               });
             });
           });
