@@ -38,7 +38,7 @@
                 <input type="text" name="role[]" placeholder="Role" required><br>
                 <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" required><br>
                 <input type="date" name="experience_end_date[]" placeholder="Experience End Date" required><br>
-                <textarea name="description[]" placeholder="Experience Description" required></textarea><br>
+                <textarea name="description[]" placeholder="Experience Description" required><%= exp.description %></textarea><br>
             `;
             container.appendChild(experienceDiv);
         }
@@ -115,7 +115,7 @@
                             <input type="text" name="role[]" placeholder="Role" value="<%= exp.role %>" required><br>
                             <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" value="<%= exp.start_date %>" required><br>
                             <input type="date" name="experience_end_date[]" placeholder="Experience End Date" value="<%= exp.end_date %>" required><br>
-                            <textarea name="description[]" placeholder="Experience Description" required><%= exp.full_description %></textarea><br>
+                            <textarea name="description[]" placeholder="Experience Description" required><%= exp.description %></textarea><br>
                         </div>
                     <% }); %>
                 </div>
