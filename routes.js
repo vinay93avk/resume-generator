@@ -1259,15 +1259,13 @@ router.get('/edit_resume/:id', (req, res) => {
 
 
 
-
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
   const { firstName, lastName, email, phone } = req.session.user;
-
-  // Use data from the request body (this could be from a form submission)
   const { skills, linkedUrl } = req.body;
 
   try {
+    // Start the transaction
     connection.beginTransaction(async (err) => {
       if (err) {
         console.error('Error starting transaction:', err);
@@ -1275,9 +1273,12 @@ router.post('/edit_resume/:id', async (req, res) => {
       }
 
       try {
-        // Update resume data
+        // Ensure skills is an array of strings
+        const parsedSkills = parseSkills(skills);
+        const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
+
+        // Update resume data in the database
         const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
-        const skillsString = skills.join(', '); // Assuming skills is an array of strings
         const resumeValues = [skillsString, linkedUrl, resumeId];
 
         await new Promise((resolve, reject) => {
@@ -1341,7 +1342,7 @@ router.post('/edit_resume/:id', async (req, res) => {
             email,
             phone,
             linkedUrl,
-            skills: skillsString,
+            skills: parsedSkills,
             education: resume.education,
             experience: resume.experience,
             certificates: resume.certificates,
@@ -1361,7 +1362,7 @@ router.post('/edit_resume/:id', async (req, res) => {
                 email,
                 phone,
                 linkedUrl,
-                skills: skillsString,
+                skills: parsedSkills,
                 education: resume.education,
                 experience: resume.experience,
                 certificates: resume.certificates,
@@ -1401,7 +1402,14 @@ router.post('/edit_resume/:id', async (req, res) => {
                     return res.status(500).send('Error updating resume with S3 URL');
                   }
 
-                  res.redirect('/show_resume'); // Redirect to the page where the user can view the updated resume
+                  connection.commit((commitErr) => {
+                    if (commitErr) {
+                      console.error('Error committing transaction:', commitErr);
+                      return connection.rollback(() => res.status(500).send('Error committing transaction'));
+                    }
+
+                    res.redirect('/show_resume'); // Redirect to the page where the user can view the updated resume
+                  });
                 });
               });
             } catch (error) {
