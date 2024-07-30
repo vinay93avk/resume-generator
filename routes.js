@@ -1264,17 +1264,16 @@ router.get('/edit_resume/:id', (req, res) => {
 
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
-  const user = req.session.user; // Retrieve user from session
+  const user = req.session.user;
 
   if (!user || !user.id) {
     return res.status(403).send('User not authenticated or session expired');
   }
 
-  const { firstName, lastName, email, phone } = user; // Destructure user details
+  const { firstName, lastName, email, phone } = user;
   const { skills, linkedUrl } = req.body;
 
   try {
-    // Start the transaction
     connection.beginTransaction(async (err) => {
       if (err) {
         console.error('Error starting transaction:', err);
@@ -1282,11 +1281,9 @@ router.post('/edit_resume/:id', async (req, res) => {
       }
 
       try {
-        // Ensure skills is an array of strings
         const parsedSkills = parseSkills(skills);
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
-        // Update resume data in the database
         const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
         const resumeValues = [skillsString, linkedUrl, resumeId];
 
@@ -1297,7 +1294,6 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Fetch updated resume data
         const query = `
           SELECT resumes.*, 
                 GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
@@ -1344,7 +1340,6 @@ router.post('/edit_resume/:id', async (req, res) => {
             return { certificate_name, issuing_organization, issue_date, expiration_date };
           }) : [];
 
-          // Render the resume to HTML for the web view
           ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
             firstName,
             lastName,
@@ -1365,7 +1360,6 @@ router.post('/edit_resume/:id', async (req, res) => {
             }
 
             try {
-              // Render the resume to HTML for PDF generation
               const pdfHtml = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
                 firstName,
                 lastName,
@@ -1377,10 +1371,10 @@ router.post('/edit_resume/:id', async (req, res) => {
                 experience: resume.experience,
                 certificates: resume.certificates,
                 projects: resume.projects,
+                downloadUrl: data.Location,
                 pdf: true  // Indicate that this is for PDF generation
               });
 
-              // Generate PDF from HTML
               const browser = await puppeteer.launch({
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
               });
@@ -1390,9 +1384,8 @@ router.post('/edit_resume/:id', async (req, res) => {
               const pdfBuffer = await page.pdf({ format: 'A4' });
               await browser.close();
 
-              // Upload PDF to S3
               const s3Params = {
-                Bucket: 'resume-generator-ocu', // Replace with your S3 bucket name
+                Bucket: 'resume-generator-ocu',
                 Key: `resumes/${user.id}-${Date.now()}.pdf`,
                 Body: pdfBuffer,
                 ContentType: 'application/pdf'
@@ -1404,7 +1397,6 @@ router.post('/edit_resume/:id', async (req, res) => {
                   return res.status(500).send('Error uploading PDF to S3');
                 }
 
-                // Update the resumes table with the S3 URL
                 const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
                 connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
                   if (updateErr) {
@@ -1418,7 +1410,7 @@ router.post('/edit_resume/:id', async (req, res) => {
                       return connection.rollback(() => res.status(500).send('Error committing transaction'));
                     }
 
-                    res.redirect('/show_resume'); // Redirect to the page where the user can view the updated resume
+                    res.redirect('/show_resume');
                   });
                 });
               });
@@ -1438,6 +1430,8 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+
+
 
 
 // Handle resume deletion
