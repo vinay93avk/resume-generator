@@ -1197,10 +1197,12 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
 // Show edit resume form
+// Route to render the edit resume page with existing data
 router.get('/edit_resume/:id', (req, res) => {
-  const resumeId = req.params.id;
+  const resumeId = req.params.id; // Use the same variable name as in the route path
   const userId = req.session.user.id;
 
+  // Query to fetch all necessary data for the resume
   const query = `
     SELECT resumes.*, 
            GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date) AS education,
@@ -1218,15 +1220,15 @@ router.get('/edit_resume/:id', (req, res) => {
 
   connection.query(query, [resumeId, userId], (error, results) => {
     if (error) {
-      console.error('Error fetching resume:', error);
-      return res.status(500).send('Error fetching resume');
+      console.error('Error fetching resume details:', error);
+      return res.status(500).send('Error fetching resume details');
     }
 
     if (results.length === 0) {
       return res.status(404).send('Resume not found');
     }
 
-    // Parse the comma-separated string into arrays or objects
+    // Parse the fetched data
     const resume = results[0];
     resume.education = resume.education ? resume.education.split(',').map(edu => {
       const [degree, institution, start_date, end_date] = edu.split(':');
@@ -1253,25 +1255,23 @@ router.get('/edit_resume/:id', (req, res) => {
   });
 });
 
-
-
-// Handle resume update
+// Route to handle the submission of the edited resume
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
+  const { firstName, lastName, email, phone } = req.session.user;
   const {
     degree, institution, startDate, endDate, company_name, role, experience_start_date,
-    experience_end_date, description, skills, linkedUrl, jobDescription,
-    certificate_name, issuing_organization, issue_date, expiration_date, project_name, github_link
+    experience_end_date, description, skills, linkedUrl, certificate_name,
+    issuing_organization, issue_date, expiration_date, project_name, github_link
   } = req.body;
-  const { firstName, lastName, email, phone } = req.session.user;
 
-  if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
+  if (!firstName || !lastName || !email || !phone) {
     return res.status(400).send('All fields are required');
   }
 
   const user = req.session.user;
 
-  // Parsing Education, Experience, Skills, Certificates, and Projects
+  // Parsing all sections
   const parsedEducation = parseEducation(degree, institution, startDate, endDate);
   const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
   const parsedSkills = parseSkills(skills);
@@ -1280,7 +1280,7 @@ router.post('/edit_resume/:id', async (req, res) => {
 
   try {
     // Generate experience points for each experience entry
-    const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
+    const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, description, skills)));
 
     // Add generated experience points to each experience entry
     parsedExperience.forEach((exp, index) => {
@@ -1367,8 +1367,8 @@ router.post('/edit_resume/:id', async (req, res) => {
 
         // Upload the updated PDF to S3
         const s3Params = {
-          Bucket: 'resume-generator-ocu',
-          Key: `resumes/${resumeId}.pdf`,
+          Bucket: 'resume-generator-ocu', // Replace with your S3 bucket name
+          Key: `resumes/${user.id}-${Date.now()}.pdf`, // Unique key for the resume
           Body: pdfBuffer,
           ContentType: 'application/pdf'
         };
@@ -1379,31 +1379,27 @@ router.post('/edit_resume/:id', async (req, res) => {
             return res.status(500).send('Error uploading updated PDF to S3');
           }
 
-          // Commit transaction and update the resume with the S3 URL
-          try {
-            const updateS3UrlQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
-            await new Promise((resolve, reject) => {
-              connection.query(updateS3UrlQuery, [data.Location, resumeId], (updateErr) => {
-                if (updateErr) return reject(updateErr);
-                resolve();
-              });
-            });
+          // Update the S3 URL in the database
+          const updateS3UrlQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+          connection.query(updateS3UrlQuery, [data.Location, resumeId], (updateErr) => {
+            if (updateErr) {
+              console.error('Error updating S3 URL in database:', updateErr);
+              return res.status(500).send('Error updating S3 URL in database');
+            }
 
+            // Commit the transaction
             connection.commit((commitErr) => {
               if (commitErr) {
                 return connection.rollback(() => res.status(500).send('Error committing transaction'));
               }
-              console.log('Updated PDF uploaded to S3:', data.Location);
-              res.redirect('/show_resume');
+              console.log('Updated resume uploaded to S3:', data.Location);
+              res.redirect('/show_resume'); // Redirect to the page where the user can view the updated resume
             });
-          } catch (commitError) {
-            console.error('Error committing transaction:', commitError);
-            return connection.rollback(() => res.status(500).send('Error committing transaction'));
-          }
+          });
         });
       } catch (transactionError) {
         console.error('Transaction error:', transactionError);
-        return connection.rollback(() => res.status(500).send('Error processing transaction'));
+        connection.rollback(() => res.status(500).send('Error processing transaction'));
       }
     });
   } catch (error) {
@@ -1411,9 +1407,6 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
-
-
-
 
 
 // Handle resume deletion
