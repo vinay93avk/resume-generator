@@ -1356,6 +1356,7 @@ router.post('/edit_resume/:id', async (req, res) => {
             experience: resume.experience,
             certificates: resume.certificates,
             projects: resume.projects,
+            downloadUrl: data.Location,
             pdf: false  // Indicate that this is for web rendering
           }, async (err, html) => {
             if (err) {
