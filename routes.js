@@ -1351,7 +1351,6 @@ router.post('/edit_resume/:id', async (req, res) => {
             experience: resume.experience,
             certificates: resume.certificates,
             projects: resume.projects,
-            downloadUrl: data.Location,
             pdf: false  // Indicate that this is for web rendering
           }, async (err, html) => {
             if (err) {
@@ -1371,7 +1370,6 @@ router.post('/edit_resume/:id', async (req, res) => {
                 experience: resume.experience,
                 certificates: resume.certificates,
                 projects: resume.projects,
-                downloadUrl: data.Location,
                 pdf: true  // Indicate that this is for PDF generation
               });
 
@@ -1410,7 +1408,28 @@ router.post('/edit_resume/:id', async (req, res) => {
                       return connection.rollback(() => res.status(500).send('Error committing transaction'));
                     }
 
-                    res.redirect('/show_resume');
+                    // Here we set the downloadUrl with data.Location and pass it to the template
+                    ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                      firstName,
+                      lastName,
+                      email,
+                      phone,
+                      linkedUrl,
+                      skills: parsedSkills,
+                      education: resume.education,
+                      experience: resume.experience,
+                      certificates: resume.certificates,
+                      projects: resume.projects,
+                      downloadUrl: data.Location, // Pass the S3 URL for downloading
+                      pdf: false
+                    }, (renderErr, finalHtml) => {
+                      if (renderErr) {
+                        console.error('Error rendering final HTML:', renderErr);
+                        return res.status(500).send('Error rendering final HTML');
+                      }
+
+                      res.send(finalHtml);
+                    });
                   });
                 });
               });
@@ -1430,6 +1449,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+
 
 
 
