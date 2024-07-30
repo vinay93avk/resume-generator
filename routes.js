@@ -1198,15 +1198,14 @@ router.get('/user/:email/certificates', (req, res) => {
 
 // Show edit resume form
 router.get('/edit_resume/:id', (req, res) => {
-  const resumeId = req.params.id; // Use the same variable name as in the route path
+  const resumeId = req.params.id;
   const userId = req.session.user.id;
 
-  // Query to fetch all necessary data for the resume
   const query = `
     SELECT resumes.*, 
            GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date) AS education,
            GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name) AS projects,
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date) AS experience,
+           GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description SEPARATOR ';;') ORDER BY exp.start_date) AS experience,
            GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date) AS certificates
     FROM resumes
     LEFT JOIN Education e ON resumes.user_id = e.user_id
@@ -1227,7 +1226,6 @@ router.get('/edit_resume/:id', (req, res) => {
       return res.status(404).send('Resume not found');
     }
 
-    // Parse the fetched data
     const resume = results[0];
     resume.education = resume.education ? resume.education.split(',').map(edu => {
       const [degree, institution, start_date, end_date] = edu.split(':');
@@ -1239,9 +1237,8 @@ router.get('/edit_resume/:id', (req, res) => {
       return { project_name, github_link };
     }) : [];
 
-    resume.experience = resume.experience ? resume.experience.split(',').map(exp => {
-      const [company_name, role, start_date, end_date, ...descriptionArr] = exp.split(':');
-      const description = descriptionArr.join(':'); // Join all parts of the description back together
+    resume.experience = resume.experience ? resume.experience.split(';;').map(exp => {
+      const [company_name, role, start_date, end_date, description] = exp.split(':');
       return { company_name, role, start_date, end_date, description };
     }) : [];
 
@@ -1253,6 +1250,7 @@ router.get('/edit_resume/:id', (req, res) => {
     res.render('edit_resume', { resume });
   });
 });
+
 
 
 // Route to handle the submission of the edited resume
