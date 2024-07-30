@@ -368,14 +368,25 @@ router.post('/generate_resume', async (req, res) => {
     });
 
     // Inserting Experience
-    const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
-    const experienceValues = parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, email]);
-    connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
-      if (error) {
-        console.error('Error saving experience:', error);
-        return res.status(500).send('Error saving experience');
-      }
-    });
+    // Inserting Experience
+      const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, full_description, email) VALUES ?';
+      const experienceValues = parsedExperience.map(exp => [
+        user.id, 
+        exp.company_name, 
+        exp.role, 
+        exp.start_date, 
+        exp.end_date, 
+        exp.full_description, // Use the full_description instead of description
+        email
+      ]);
+
+      connection.query(insertExperienceQuery, [experienceValues], (error, results) => {
+        if (error) {
+          console.error('Error saving experience:', error);
+          return res.status(500).send('Error saving experience');
+        }
+      });
+
 
     // Inserting Skills
     const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
@@ -1183,7 +1194,6 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
 // Show edit resume form
-// Show edit resume form
 router.get('/edit_resume/:id', (req, res) => {
   const resumeId = req.params.id;
   const userId = req.session.user.id;
@@ -1226,7 +1236,8 @@ router.get('/edit_resume/:id', (req, res) => {
     }) : [];
 
     resume.experience = resume.experience ? resume.experience.split(',').map(exp => {
-      const [company_name, role, start_date, end_date, description] = exp.split(':');
+      const [company_name, role, start_date, end_date, ...descriptionArr] = exp.split(':');
+      const description = descriptionArr.join(':'); // Join all parts of the description back together
       return { company_name, role, start_date, end_date, description };
     }) : [];
 
