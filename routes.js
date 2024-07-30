@@ -1270,7 +1270,14 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl } = req.body;
+  const {
+    degree, institution, startDate, endDate,
+    company_name, role, experience_start_date,
+    experience_end_date, description,
+    skills, linkedUrl,
+    certificate_name, issuing_organization, issue_date, expiration_date,
+    project_name, github_link
+  } = req.body;
 
   try {
     connection.beginTransaction(async (err) => {
@@ -1280,23 +1287,65 @@ router.post('/edit_resume/:id', async (req, res) => {
       }
 
       try {
-        // Parse skills
+        // Parse the form data
+        const parsedEducation = parseEducation(degree, institution, startDate, endDate);
+        const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
         const parsedSkills = parseSkills(skills);
-        const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
+        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
+        const parsedProjects = parseProjects(project_name, github_link);
 
-        // Update resume data in the database
+        // Update resumes table with basic info
         const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
-        const resumeValues = [skillsString, linkedUrl, resumeId];
+        const resumeValues = [parsedSkills.map(skill => skill.skill_name).join(', '), linkedUrl, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
-            if (err) {
-              console.error('Error updating resume:', err);
-              return reject(err);
-            }
+            if (err) return reject(err);
             resolve();
           });
         });
+
+        // Update education, experience, skills, certificates, and projects tables
+        const deleteOldDataQueries = [
+          'DELETE FROM Education WHERE user_id = ?',
+          'DELETE FROM Experience WHERE user_id = ?',
+          'DELETE FROM Skills WHERE user_id = ?',
+          'DELETE FROM Certificates WHERE user_id = ?',
+          'DELETE FROM Projects WHERE user_id = ?'
+        ];
+        await Promise.all(deleteOldDataQueries.map(query => {
+          return new Promise((resolve, reject) => {
+            connection.query(query, [user.id], (err) => {
+              if (err) return reject(err);
+              resolve();
+            });
+          });
+        }));
+
+        const insertNewDataQueries = {
+          education: 'INSERT INTO Education (user_id, degree, institution, start_date, end_date) VALUES ?',
+          experience: 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES ?',
+          skills: 'INSERT INTO Skills (user_id, skill_name, proficiency_level) VALUES ?',
+          certificates: 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES ?',
+          projects: 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?'
+        };
+
+        const newDataValues = {
+          education: parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date]),
+          experience: parsedExperience.map(exp => [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description]),
+          skills: parsedSkills.map(skill => [user.id, skill.skill_name, skill.proficiency_level]),
+          certificates: parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date]),
+          projects: parsedProjects.map(project => [user.id, project.project_name, project.github_link])
+        };
+
+        await Promise.all(Object.keys(insertNewDataQueries).map(key => {
+          return new Promise((resolve, reject) => {
+            connection.query(insertNewDataQueries[key], [newDataValues[key]], (err) => {
+              if (err) return reject(err);
+              resolve();
+            });
+          });
+        }));
 
         // Fetch updated resume data
         const query = `
@@ -1462,10 +1511,6 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
-
-
-
-
 
 
 // Handle resume deletion
