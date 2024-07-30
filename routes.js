@@ -1190,10 +1190,10 @@ router.get('/edit_resume/:id', (req, res) => {
 
   const query = `
     SELECT resumes.*, 
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, e.start_date, e.end_date) ORDER BY e.start_date) AS education,
+           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date) AS education,
            GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name) AS projects,
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description) ORDER BY exp.start_date) AS experience,
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, c.issue_date, c.expiration_date) ORDER BY c.issue_date) AS certificates
+           GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date) AS experience,
+           GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date) AS certificates
     FROM resumes
     LEFT JOIN Education e ON resumes.user_id = e.user_id
     LEFT JOIN Projects p ON resumes.user_id = p.user_id
@@ -1202,7 +1202,7 @@ router.get('/edit_resume/:id', (req, res) => {
     WHERE resumes.id = ? AND resumes.user_id = ?
     GROUP BY resumes.id
   `;
-  
+
   connection.query(query, [resumeId, userId], (error, results) => {
     if (error) {
       console.error('Error fetching resume:', error);
@@ -1243,15 +1243,14 @@ router.get('/edit_resume/:id', (req, res) => {
 
 // Handle resume update
 // Handle resume update
-// Handle resume update
 router.post('/edit_resume/:id', (req, res) => {
   const resumeId = req.params.id;
   const userId = req.session.user.id;
-  const { firstName, lastName, email, phone, degree, institution, startDate, endDate, project_name, github_link, company_name, role, experience_start_date, experience_end_date, description, skills, jobDescription, certificate_name, issuing_organization, issue_date, expiration_date, linkedUrl } = req.body;
+  const { firstName, lastName, email, phone, degree, institution, startDate, endDate, project_name, github_link, company_name, role, experience_start_date, experience_end_date, description, skills, certificate_name, issuing_organization, issue_date, expiration_date, linkedUrl } = req.body;
 
   // Update the resumes table with the basic information
-  const updateResumeQuery = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ?, linkedUrl = ?, skills = ?, jobDescription = ? WHERE id = ? AND user_id = ?';
-  const resumeValues = [firstName, lastName, email, phone, linkedUrl, skills, jobDescription, resumeId, userId];
+  const updateResumeQuery = 'UPDATE resumes SET firstName = ?, lastName = ?, email = ?, phone = ?, linkedUrl = ?, skills = ? WHERE id = ? AND user_id = ?';
+  const resumeValues = [firstName, lastName, email, phone, linkedUrl, skills, resumeId, userId];
 
   connection.query(updateResumeQuery, resumeValues, (error) => {
     if (error) {
@@ -1299,7 +1298,7 @@ router.post('/edit_resume/:id', (req, res) => {
                       // Generate the updated PDF
                       try {
                         const html = await ejs.renderFile(path.join(__dirname, 'views', 'generated_resume.ejs'), {
-                          firstName, lastName, email, phone, linkedUrl, skills, jobDescription,
+                          firstName, lastName, email, phone, linkedUrl, skills,
                           education: educationValues.map(([_, degree, institution, startDate, endDate]) => ({ degree, institution, start_date: startDate, end_date: endDate })),
                           projects: projectsValues.map(([_, project_name, github_link]) => ({ project_name, github_link })),
                           experience: experienceValues.map(([_, company_name, role, startDate, endDate, description]) => ({ company_name, role, start_date: startDate, end_date: endDate, description })),
@@ -1345,6 +1344,7 @@ router.post('/edit_resume/:id', (req, res) => {
     });
   });
 });
+
 
 
 // Handle resume deletion
