@@ -1203,10 +1203,10 @@ router.get('/edit_resume/:id', (req, res) => {
 
   const query = `
     SELECT resumes.*, 
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date) AS education,
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name) AS projects,
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description SEPARATOR ';;') ORDER BY exp.start_date) AS experience,
-           GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date) AS certificates
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
     FROM resumes
     LEFT JOIN Education e ON resumes.user_id = e.user_id
     LEFT JOIN Projects p ON resumes.user_id = p.user_id
@@ -1214,7 +1214,8 @@ router.get('/edit_resume/:id', (req, res) => {
     LEFT JOIN Certificates c ON resumes.user_id = c.user_id
     WHERE resumes.id = ? AND resumes.user_id = ?
     GROUP BY resumes.id
-  `;
+`;
+
 
   connection.query(query, [resumeId, userId], (error, results) => {
     if (error) {
