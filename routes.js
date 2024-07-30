@@ -1239,9 +1239,9 @@ router.get('/edit_resume/:id', (req, res) => {
     }) : [];
 
     resume.experience = resume.experience ? resume.experience.split(',').map(exp => {
-      const [company_name, role, start_date, end_date, ...descriptionArr] = exp.split(':');
-      const description = descriptionArr.join(':'); // Join all parts of the full description back together
-      return { company_name, role, start_date, end_date, description };
+      const [company_name, role, start_date, end_date, ...full_descriptionArr] = exp.split(':');
+      const full_description = full_descriptionArr.join(':'); // Join all parts of the full description back together
+      return { company_name, role, start_date, end_date, full_description };
     }) : [];
 
     resume.certificates = resume.certificates ? resume.certificates.split(',').map(cert => {
