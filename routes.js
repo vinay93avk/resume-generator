@@ -1200,16 +1200,10 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
 // Show edit resume form
-
 router.get('/edit_resume/:id', (req, res) => {
-  if (!req.session.user || !req.session.user.id) {
-    return res.status(403).send('User not authenticated or session expired');
-  }
-
   const resumeId = req.params.id;
   const userId = req.session.user.id;
 
-  // Query to fetch resume details, including projects
   const query = `
     SELECT resumes.*, 
           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
@@ -1259,13 +1253,12 @@ router.get('/edit_resume/:id', (req, res) => {
       return { certificate_name, issuing_organization, issue_date, expiration_date };
     }) : [];
 
-    // Ensure skills is an array of strings
+    // Ensuring skills is an array of strings
     resume.skills = resume.skills ? resume.skills.split(',').map(skill => skill.trim()) : [];
 
     res.render('edit_resume', { resume });
   });
 });
-
 
 
 router.post('/edit_resume/:id', async (req, res) => {
@@ -1277,10 +1270,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl, degree, institution, startDate, endDate, 
-          company_name, role, experience_start_date, experience_end_date, 
-          description, certificate_name, issuing_organization, issue_date, 
-          expiration_date, project_name, github_link } = req.body;
+  const { skills, linkedUrl } = req.body;
 
   try {
     connection.beginTransaction(async (err) => {
@@ -1308,208 +1298,159 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Update Education table
-        const parsedEducation = parseEducation(degree, institution, startDate, endDate);
-        if (parsedEducation.length > 0) {
-          await new Promise((resolve, reject) => {
-            const deleteEducationQuery = 'DELETE FROM Education WHERE user_id = ?';
-            connection.query(deleteEducationQuery, [user.id], (err) => {
-              if (err) return reject(err);
-              resolve();
-            });
-          });
-          
-          const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
-          const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
-          await new Promise((resolve, reject) => {
-            connection.query(insertEducationQuery, [educationValues], (err) => {
-              if (err) {
-                console.error('Error saving education:', err);
-                return reject(err);
-              }
-              resolve();
-            });
-          });
-        }
+        // Fetch updated resume data
+        const query = `
+          SELECT resumes.*, 
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
+          FROM resumes
+          LEFT JOIN Education e ON resumes.user_id = e.user_id
+          LEFT JOIN Projects p ON resumes.user_id = p.user_id
+          LEFT JOIN Experience exp ON resumes.user_id = exp.user_id
+          LEFT JOIN Certificates c ON resumes.user_id = c.user_id
+          WHERE resumes.id = ? AND resumes.user_id = ?
+          GROUP BY resumes.id
+        `;
 
-        // Update Experience table
-        const parsedExperience = parseExperience(company_name, role, experience_start_date, experience_end_date, description);
-        if (parsedExperience.length > 0) {
-          await new Promise((resolve, reject) => {
-            const deleteExperienceQuery = 'DELETE FROM Experience WHERE user_id = ?';
-            connection.query(deleteExperienceQuery, [user.id], (err) => {
-              if (err) return reject(err);
-              resolve();
-            });
-          });
-
-          const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES ?';
-          const experienceValues = parsedExperience.map(exp => [
-            user.id,
-            exp.company_name,
-            exp.role,
-            exp.start_date,
-            exp.end_date,
-            exp.description,
-            email
-          ]);
-          await new Promise((resolve, reject) => {
-            connection.query(insertExperienceQuery, [experienceValues], (err) => {
-              if (err) {
-                console.error('Error saving experience:', err);
-                return reject(err);
-              }
-              resolve();
-            });
-          });
-        }
-
-        // Update Skills table
-        if (parsedSkills.length > 0) {
-          await new Promise((resolve, reject) => {
-            const deleteSkillsQuery = 'DELETE FROM Skills WHERE user_id = ?';
-            connection.query(deleteSkillsQuery, [user.id], (err) => {
-              if (err) return reject(err);
-              resolve();
-            });
-          });
-
-          const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
-          const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
-          await new Promise((resolve, reject) => {
-            connection.query(insertSkillsQuery, [skillValues], (err) => {
-              if (err) {
-                console.error('Error saving skill:', err);
-                return reject(err);
-              }
-              resolve();
-            });
-          });
-        }
-
-        // Update Certificates table
-        const parsedCertificates = parseCertificates(certificate_name, issuing_organization, issue_date, expiration_date);
-        if (parsedCertificates.length > 0) {
-          await new Promise((resolve, reject) => {
-            const deleteCertificatesQuery = 'DELETE FROM Certificates WHERE user_id = ?';
-            connection.query(deleteCertificatesQuery, [user.id], (err) => {
-              if (err) return reject(err);
-              resolve();
-            });
-          });
-
-          const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
-          const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
-          await new Promise((resolve, reject) => {
-            connection.query(insertCertificatesQuery, [certificateValues], (err) => {
-              if (err) {
-                console.error('Error saving certificate:', err);
-                return reject(err);
-              }
-              resolve();
-            });
-          });
-        }
-
-        // Render the resume to HTML for the web view
-        ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
-          firstName,
-          lastName,
-          email,
-          phone,
-          linkedUrl,
-          skills: parsedSkills,
-          education: parsedEducation,
-          experience: parsedExperience,
-          certificates: parsedCertificates,
-          pdf: false  // Indicate that this is for web rendering
-        }, async (err, html) => {
-          if (err) {
-            console.error('Error rendering resume HTML:', err);
-            return res.status(500).send('Error rendering resume HTML');
+        connection.query(query, [resumeId, user.id], (error, results) => {
+          if (error) {
+            console.error('Error fetching updated resume details:', error);
+            return res.status(500).send('Error fetching updated resume details');
           }
 
-          try {
-            // Render the resume to HTML for PDF generation
-            const pdfHtml = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
-              firstName,
-              lastName,
-              email,
-              phone,
-              linkedUrl,
-              skills: parsedSkills,
-              education: parsedEducation,
-              experience: parsedExperience,
-              certificates: parsedCertificates,
-              pdf: true  // Indicate that this is for PDF generation
-            });
+          if (results.length === 0) {
+            return res.status(404).send('Resume not found');
+          }
 
-            // Generate PDF from HTML
-            const browser = await puppeteer.launch({
-              args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-            const page = await browser.newPage();
-            await page.setContent(pdfHtml, { waitUntil: 'networkidle0' });
+          const resume = results[0];
+          resume.education = resume.education ? resume.education.split(';;').map(edu => {
+            const [degree, institution, start_date, end_date] = edu.split(':');
+            return { degree, institution, start_date, end_date };
+          }) : [];
 
-            const pdfBuffer = await page.pdf({ format: 'A4' });
-            await browser.close();
+          resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
+            let [project_name, github_link] = proj.split(':');
+            if (github_link && !github_link.startsWith('http://') && !github_link.startsWith('https://')) {
+              github_link = 'https://' + github_link; // Default to https
+            }
+            return { project_name, github_link };
+          }) : [];
 
-            // Upload PDF to S3
-            const s3Params = {
-              Bucket: 'resume-generator-ocu',
-              Key: `resumes/${user.id}-${Date.now()}.pdf`,
-              Body: pdfBuffer,
-              ContentType: 'application/pdf'
-            };
+          resume.experience = resume.experience ? resume.experience.split(';;').map(exp => {
+            const [company_name, role, start_date, end_date, description] = exp.split(':');
+            return { company_name, role, start_date, end_date, description };
+          }) : [];
 
-            s3.upload(s3Params, (s3Err, data) => {
-              if (s3Err) {
-                console.error('Error uploading PDF to S3:', s3Err);
-                return res.status(500).send('Error uploading PDF to S3');
-              }
+          resume.certificates = resume.certificates ? resume.certificates.split(';;').map(cert => {
+            const [certificate_name, issuing_organization, issue_date, expiration_date] = cert.split(':');
+            return { certificate_name, issuing_organization, issue_date, expiration_date };
+          }) : [];
 
-              // Update the resumes table with the S3 URL
-              const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
-              connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
-                if (updateErr) {
-                  console.error('Error updating resume with S3 URL:', updateErr);
-                  return res.status(500).send('Error updating resume with S3 URL');
+          // Render the resume to HTML for the web view
+          ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+            firstName,
+            lastName,
+            email,
+            phone,
+            linkedUrl,
+            skills: parsedSkills,
+            education: resume.education,
+            experience: resume.experience,
+            certificates: resume.certificates,
+            projects: resume.projects,
+            pdf: false  // Indicate that this is for web rendering
+          }, async (err, html) => {
+            if (err) {
+              console.error('Error rendering resume HTML:', err);
+              return res.status(500).send('Error rendering resume HTML');
+            }
+
+            try {
+              // Render the resume to HTML for PDF generation
+              const pdfHtml = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                firstName,
+                lastName,
+                email,
+                phone,
+                linkedUrl,
+                skills: parsedSkills,
+                education: resume.education,
+                experience: resume.experience,
+                certificates: resume.certificates,
+                projects: resume.projects,
+                pdf: true  // Indicate that this is for PDF generation
+              });
+
+              // Generate PDF from HTML
+              const browser = await puppeteer.launch({
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+              });
+              const page = await browser.newPage();
+              await page.setContent(pdfHtml, { waitUntil: 'networkidle0' });
+
+              const pdfBuffer = await page.pdf({ format: 'A4' });
+              await browser.close();
+
+              // Upload PDF to S3
+              const s3Params = {
+                Bucket: 'resume-generator-ocu',
+                Key: `resumes/${user.id}-${Date.now()}.pdf`,
+                Body: pdfBuffer,
+                ContentType: 'application/pdf'
+              };
+
+              s3.upload(s3Params, (s3Err, data) => {
+                if (s3Err) {
+                  console.error('Error uploading PDF to S3:', s3Err);
+                  return res.status(500).send('Error uploading PDF to S3');
                 }
 
-                // Render the final resume view with the download link
-                ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
-                  firstName,
-                  lastName,
-                  email,
-                  phone,
-                  linkedUrl,
-                  skills: parsedSkills,
-                  education: parsedEducation,
-                  experience: parsedExperience,
-                  certificates: parsedCertificates,
-                  downloadUrl: data.Location, // Set the download URL for the PDF
-                  pdf: false  // For the web view
-                }, (renderErr, finalHtml) => {
-                  if (renderErr) {
-                    console.error('Error rendering final HTML:', renderErr);
-                    return res.status(500).send('Error rendering final HTML');
+                // Update the resumes table with the S3 URL
+                const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
+                  if (updateErr) {
+                    console.error('Error updating resume with S3 URL:', updateErr);
+                    return res.status(500).send('Error updating resume with S3 URL');
                   }
 
-                  connection.commit((commitErr) => {
-                    if (commitErr) {
-                      console.error('Error committing transaction:', commitErr);
-                      return connection.rollback(() => res.status(500).send('Error committing transaction'));
+                  // Render the final resume view with the download link
+                  ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    linkedUrl,
+                    skills: parsedSkills,
+                    education: resume.education,
+                    experience: resume.experience,
+                    certificates: resume.certificates,
+                    projects: resume.projects,
+                    downloadUrl: data.Location, // Set the download URL for the PDF
+                    pdf: false  // For the web view
+                  }, (renderErr, finalHtml) => {
+                    if (renderErr) {
+                      console.error('Error rendering final HTML:', renderErr);
+                      return res.status(500).send('Error rendering final HTML');
                     }
 
-                    res.send(finalHtml); // Send the final HTML response
+                    connection.commit((commitErr) => {
+                      if (commitErr) {
+                        console.error('Error committing transaction:', commitErr);
+                        return connection.rollback(() => res.status(500).send('Error committing transaction'));
+                      }
+
+                      res.send(finalHtml); // Send the final HTML response
+                    });
                   });
                 });
               });
-            });
-          } catch (error) {
-            console.error('Error generating PDF:', error);
-            res.status(500).send('Error generating PDF');
-          }
+            } catch (error) {
+              console.error('Error generating PDF:', error);
+              res.status(500).send('Error generating PDF');
+            }
+          });
         });
       } catch (transactionError) {
         console.error('Transaction error:', transactionError);
@@ -1518,9 +1459,12 @@ router.post('/edit_resume/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating resume:', error);
-    connection.rollback(() => res.status(500).send('Error updating resume'));
+    res.status(500).send('Error updating resume');
   }
 });
+
+
+
 
 
 
