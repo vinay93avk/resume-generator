@@ -1281,7 +1281,7 @@ router.post('/edit_resume/:id', async (req, res) => {
 
       try {
         // Parse skills
-        const parsedSkills = parseSkills(skills);
+        const parsedSkills = parseSkills(skills || '');
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
         // Update resume data in the database
@@ -1313,36 +1313,44 @@ router.post('/edit_resume/:id', async (req, res) => {
         }
 
         // Update or insert experience
-        const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
-        for (const exp of parseExperience(experience)) {
-          await new Promise((resolve, reject) => {
-            connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
-              if (err) {
-                console.error('Error updating experience:', err);
-                return reject(err);
-              }
-              resolve();
+        if (experience) {
+          const parsedExperience = parseExperience(experience);
+          const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
+          for (const exp of parsedExperience) {
+            await new Promise((resolve, reject) => {
+              connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
+                if (err) {
+                  console.error('Error updating experience:', err);
+                  return reject(err);
+                }
+                resolve();
+              });
             });
-          });
+          }
         }
 
         // Update or insert projects
-        const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
-        for (const project of parseProjects(projects)) {
-          await new Promise((resolve, reject) => {
-            connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
-              if (err) {
-                console.error('Error updating projects:', err);
-                return reject(err);
-              }
-              resolve();
+        if (projects) {
+          const parsedProjects = parseProjects(projects);
+          const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
+          for (const project of parsedProjects) {
+            await new Promise((resolve, reject) => {
+              connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
+                if (err) {
+                  console.error('Error updating projects:', err);
+                  return reject(err);
+                }
+                resolve();
+              });
             });
-          });
+          }
         }
 
         // Update or insert certificates
+      if (certificates) {
+        const parsedCertificates = parseCertificates(certificates);
         const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
-        for (const cert of parseCertificates(certificates)) {
+        for (const cert of parsedCertificates) {
           await new Promise((resolve, reject) => {
             connection.query(updateCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date], (err) => {
               if (err) {
@@ -1352,6 +1360,7 @@ router.post('/edit_resume/:id', async (req, res) => {
               resolve();
             });
           });
+        }
         }
 
         // Fetch updated resume data
@@ -1517,7 +1526,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     console.error('Error updating resume:', error);
     res.status(500).send('Error updating resume');
   }
-});
+  });
 
 
 
