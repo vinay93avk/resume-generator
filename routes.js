@@ -1209,8 +1209,7 @@ router.get('/edit_resume/:id', (req, res) => {
   const resumeId = req.params.id;
   const userId = req.session.user.id;
 
-  // Your existing database query to fetch resume details
-  // Make sure that your query result includes 'projects'
+  // Query to fetch resume details, including projects
   const query = `
     SELECT resumes.*, 
           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
@@ -1266,6 +1265,7 @@ router.get('/edit_resume/:id', (req, res) => {
     res.render('edit_resume', { resume });
   });
 });
+
 
 
 router.post('/edit_resume/:id', async (req, res) => {

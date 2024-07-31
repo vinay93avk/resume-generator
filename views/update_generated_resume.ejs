@@ -12,46 +12,58 @@
         <h1><%= firstName %> <%= lastName %></h1>
         <p><%= phone %> | <%= email %> | <a href="<%= linkedUrl %>" target="_blank"><%= linkedUrl %></a></p>
         
-        <h2>Skills</h2>
-        <ul>
-            <% skills.forEach(function(skill) { %>
-                <li><%= skill.skill_name %> - <%= skill.proficiency_level %></li>
-            <% }); %>
-        </ul>
-        
-        <h2>Experience</h2>
-        <% experience.forEach(function(exp) { %>
-            <p><strong><%= exp.role %></strong>, <%= exp.company_name %> | <%= exp.start_date %> - <%= exp.end_date %></p>
+        <% if (skills && skills.length > 0) { %>
+            <h2>Skills</h2>
             <ul>
-                <% exp.description.split('; ').forEach(function(point) { %>
-                    <li><%= point %></li>
+                <% skills.forEach(function(skill) { %>
+                    <li><%= skill.skill_name %> - <%= skill.proficiency_level %></li>
                 <% }); %>
             </ul>
-        <% }); %>
+        <% } %>
         
-        <h2>Education</h2>
-        <% education.forEach(function(edu) { %>
-            <p><strong><%= edu.institution %></strong> | <%= edu.start_date %> - <%= edu.end_date %><br>
-            <%= edu.degree %></p>
-        <% }); %>
-        
-        <h2>Certificates</h2>
-        <ul>
-            <% certificates.forEach(function(cert) { %>
-                <li>
-                    <strong><%= cert.certificate_name %></strong> from <%= cert.issuing_organization %><br>
-                    <em>Issue Date:</em> <%= cert.issue_date %>, <em>Expiration Date:</em> <%= cert.expiration_date %>
-                </li>
+        <% if (experience && experience.length > 0) { %>
+            <h2>Experience</h2>
+            <% experience.forEach(function(exp) { %>
+                <p><strong><%= exp.role %></strong>, <%= exp.company_name %> | <%= exp.start_date %> - <%= exp.end_date %></p>
+                <ul>
+                    <% exp.description.split('; ').forEach(function(point) { %>
+                        <li><%= point %></li>
+                    <% }); %>
+                </ul>
             <% }); %>
-        </ul>
+        <% } %>
         
-        <h2>Projects</h2>
-        <ul>
-            <% projects.forEach(function(project) { %>
-                <li><strong><%= project.project_name %></strong><br>
-                <a href="<%= project.github_link %>" target="_blank"><%= project.github_link %></a></li>
+        <% if (education && education.length > 0) { %>
+            <h2>Education</h2>
+            <% education.forEach(function(edu) { %>
+                <p><strong><%= edu.institution %></strong> | <%= edu.start_date %> - <%= edu.end_date %><br>
+                <%= edu.degree %></p>
             <% }); %>
-        </ul>
+        <% } %>
+        
+        <% if (certificates && certificates.length > 0) { %>
+            <h2>Certificates</h2>
+            <ul>
+                <% certificates.forEach(function(cert) { %>
+                    <li>
+                        <strong><%= cert.certificate_name %></strong> from <%= cert.issuing_organization %><br>
+                        <em>Issue Date:</em> <%= cert.issue_date %>, <em>Expiration Date:</em> <%= cert.expiration_date %>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+        
+        <% if (projects && projects.length > 0) { %>
+            <h2>Projects</h2>
+            <ul>
+                <% projects.forEach(function(project) { %>
+                    <li><strong><%= project.project_name %></strong><br>
+                    <a href="<%= project.github_link %>" target="_blank"><%= project.github_link %></a></li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>No projects available.</p>
+        <% } %>
     </div>
 </body>
 </html>
