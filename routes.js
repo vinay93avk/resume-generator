@@ -1200,10 +1200,17 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
 // Show edit resume form
+
 router.get('/edit_resume/:id', (req, res) => {
+  if (!req.session.user || !req.session.user.id) {
+    return res.status(403).send('User not authenticated or session expired');
+  }
+
   const resumeId = req.params.id;
   const userId = req.session.user.id;
 
+  // Your existing database query to fetch resume details
+  // Make sure that your query result includes 'projects'
   const query = `
     SELECT resumes.*, 
           GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
@@ -1253,7 +1260,7 @@ router.get('/edit_resume/:id', (req, res) => {
       return { certificate_name, issuing_organization, issue_date, expiration_date };
     }) : [];
 
-    // Ensuring skills is an array of strings
+    // Ensure skills is an array of strings
     resume.skills = resume.skills ? resume.skills.split(',').map(skill => skill.trim()) : [];
 
     res.render('edit_resume', { resume });
