@@ -1270,7 +1270,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl } = req.body;
+  const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
 
   try {
     connection.beginTransaction(async (err) => {
@@ -1298,6 +1298,62 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
+        // Update or insert skills
+        const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
+        for (const skill of parsedSkills) {
+          await new Promise((resolve, reject) => {
+            connection.query(updateSkillsQuery, [user.id, skill.skill_name, skill.proficiency_level], (err) => {
+              if (err) {
+                console.error('Error updating skills:', err);
+                return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
+
+        // Update or insert experience
+        const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
+        for (const exp of parseExperience(experience)) {
+          await new Promise((resolve, reject) => {
+            connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
+              if (err) {
+                console.error('Error updating experience:', err);
+                return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
+
+        // Update or insert projects
+        const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
+        for (const project of parseProjects(projects)) {
+          await new Promise((resolve, reject) => {
+            connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
+              if (err) {
+                console.error('Error updating projects:', err);
+                return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
+
+        // Update or insert certificates
+        const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
+        for (const cert of parseCertificates(certificates)) {
+          await new Promise((resolve, reject) => {
+            connection.query(updateCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date], (err) => {
+              if (err) {
+                console.error('Error updating certificates:', err);
+                return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
+
         // Fetch updated resume data
         const query = `
           SELECT resumes.*, 
@@ -1314,7 +1370,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           GROUP BY resumes.id
         `;
 
-        connection.query(query, [resumeId, user.id], (error, results) => {
+        connection.query(query, [resumeId, user.id], async (error, results) => {
           if (error) {
             console.error('Error fetching updated resume details:', error);
             return res.status(500).send('Error fetching updated resume details');
@@ -1408,8 +1464,8 @@ router.post('/edit_resume/:id', async (req, res) => {
                 }
 
                 // Update the resumes table with the S3 URL
-                const updateResumeQuery = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
-                connection.query(updateResumeQuery, [data.Location, resumeId], (updateErr) => {
+                const updateResumeS3Query = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                connection.query(updateResumeS3Query, [data.Location, resumeId], (updateErr) => {
                   if (updateErr) {
                     console.error('Error updating resume with S3 URL:', updateErr);
                     return res.status(500).send('Error updating resume with S3 URL');
