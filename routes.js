@@ -222,7 +222,6 @@ router.post('/edit_comment', (req, res) => {
   });
 });
 
-
 // Route to delete a comment
 router.post('/delete_comment', (req, res) => {
   if (!req.session.user || !req.session.user.is_admin) {
@@ -241,9 +240,6 @@ router.post('/delete_comment', (req, res) => {
     res.redirect('/admin_dashboard');
   });
 });
-
-
-
 
 
 router.get('/logout', (req, res) => {
