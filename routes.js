@@ -225,8 +225,8 @@ router.post('/delete_comment/:id', (req, res) => {
 
   const commentId = req.params.id;
 
-  const query = 'DELETE FROM comments WHERE id = ? AND admin_id = ?';
-  connection.query(query, [commentId, req.session.user.id], (error) => {
+  const query = 'DELETE FROM comments WHERE id = ?';
+  connection.query(query, [commentId], (error, results) => {
     if (error) {
       console.error('Error deleting comment:', error);
       return res.status(500).send('Error deleting comment');
