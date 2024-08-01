@@ -203,6 +203,48 @@ router.post('/add_comment', (req, res) => {
 });
 
 
+// Route to edit a comment
+router.post('/edit_comment', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+    return res.status(403).send('Access denied');
+  }
+
+  const { comment_id, updated_comment } = req.body;
+
+  const query = 'UPDATE comments SET comment = ? WHERE id = ?';
+  connection.query(query, [updated_comment, comment_id], (error, results) => {
+    if (error) {
+      console.error('Error editing comment:', error);
+      return res.status(500).send('Error editing comment');
+    }
+
+    res.redirect('/admin_dashboard');
+  });
+});
+
+
+// Route to delete a comment
+router.post('/delete_comment', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+    return res.status(403).send('Access denied');
+  }
+
+  const { comment_id } = req.body;
+
+  const query = 'DELETE FROM comments WHERE id = ?';
+  connection.query(query, [comment_id], (error, results) => {
+    if (error) {
+      console.error('Error deleting comment:', error);
+      return res.status(500).send('Error deleting comment');
+    }
+
+    res.redirect('/admin_dashboard');
+  });
+});
+
+
+
+
 
 router.get('/logout', (req, res) => {
   if (req.session.user) {
