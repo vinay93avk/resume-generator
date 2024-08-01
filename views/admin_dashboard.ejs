@@ -4,49 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/stylesheets/style.css">
 </head>
 <body>
     <header>
-        <div class="container">
-            <div id="branding">
-                <h1>Admin Dashboard</h1>
-            </div>
-            <nav>
-                <ul>
-                    <li><a href="/logout">Logout</a></li>
-                </ul>
-            </nav>
-        </div>
+        <h1>Admin Dashboard</h1>
+        <a href="/logout">Logout</a>
     </header>
-    <div class="container">
-        <h2>All Generated Resumes</h2>
-        <div class="resume-previews">
-            <% resumes.forEach(resume => { %>
-                <div class="resume-item">
+    <main>
+        <h2>Resumes</h2>
+        <ul>
+            <% resumes.forEach(function(resume) { %>
+                <li>
                     <h3><%= resume.firstName %> <%= resume.lastName %></h3>
-                    <iframe src="<%= resume.s3_url %>" width="100%" height="500px"></iframe>
-                    <div class="comments">
-                        <h4>Comments</h4>
-                        <% resume.comments.forEach(comment => { %>
-                            <div class="comment">
-                                <p><strong>Admin:</strong> <%= comment.comment %> <em>(<%= comment.created_at %>)</em></p>
-                                <div class="action-buttons">
-                                    <form action="/delete_comment/<%= comment.id %>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this comment?');">
-                                        <button type="submit" class="btn">Delete Comment</button>
-                                    </form>
-                                </div>
-                            </div>
-                        <% }) %>
-                    </div>
+                    <a href="<%= resume.s3_url %>" target="_blank">View Resume</a>
+                    <h4>Comments</h4>
+                    <ul>
+                        <% resume.comments.forEach(function(comment) { %>
+                            <li>
+                                <p><%= comment.comment %></p>
+                                <form action="/delete_comment/<%= comment.id %>" method="POST">
+                                    <button type="submit">Delete</button>
+                                </form>
+                            </li>
+                        <% }); %>
+                    </ul>
                     <form action="/add_comment" method="POST">
                         <input type="hidden" name="resume_id" value="<%= resume.id %>">
-                        <textarea name="comment" rows="3" placeholder="Add a comment..."></textarea>
+                        <textarea name="comment" required></textarea>
                         <button type="submit">Add Comment</button>
                     </form>
-                </div>
+                </li>
             <% }); %>
-        </div>
-    </div>
+        </ul>
+    </main>
 </body>
 </html>

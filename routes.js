@@ -146,11 +146,11 @@ router.get('/show_resume', (req, res) => {
 
 router.get('/admin_dashboard', (req, res) => {
   if (!req.session.user || !req.session.user.is_admin) {
-    return res.status(403).send('Access denied'); // Only allow access if the user is an admin
+    return res.status(403).send('Access denied');
   }
 
   const query = `
-    SELECT users.firstName, users.lastName, resumes.id, resumes.s3_url, comments.comment, comments.created_at
+    SELECT users.firstName, users.lastName, resumes.id, resumes.s3_url, comments.comment, comments.created_at, comments.id AS commentId
     FROM resumes
     JOIN users ON resumes.user_id = users.id
     LEFT JOIN comments ON resumes.id = comments.resume_id
@@ -165,14 +165,14 @@ router.get('/admin_dashboard', (req, res) => {
     const resumes = results.reduce((acc, row) => {
       const resume = acc.find(r => r.id === row.id);
       if (resume) {
-        resume.comments.push({ comment: row.comment, created_at: row.created_at });
+        resume.comments.push({ comment: row.comment, created_at: row.created_at, id: row.commentId });
       } else {
         acc.push({
           id: row.id,
           firstName: row.firstName,
           lastName: row.lastName,
           s3_url: row.s3_url,
-          comments: row.comment ? [{ comment: row.comment, created_at: row.created_at }] : []
+          comments: row.comment ? [{ comment: row.comment, created_at: row.created_at, id: row.commentId }] : []
         });
       }
       return acc;
