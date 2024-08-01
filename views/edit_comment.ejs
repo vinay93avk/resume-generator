@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Comment</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Edit Comment</h1>
+        <form action="/edit_comment/<%= comment.id %>" method="POST">
+            <textarea name="comment" rows="5" required><%= comment.comment %></textarea>
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</body>
+</html>

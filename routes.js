@@ -202,20 +202,48 @@ router.post('/add_comment', (req, res) => {
   });
 });
 
-// Assuming Express is set up and 'connection' is your MySQL connection object
-// router.post('/delete_comment/:id', (req, res) => {
-//   const commentId = req.params.id;
+// Route to display the edit form
+router.get('/edit_comment/:id', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+      return res.status(403).send('Access denied');
+  }
 
-//   const query = 'DELETE FROM comments WHERE id = ?';
-//   connection.query(query, [commentId], (error) => {
-//     if (error) {
-//       console.error('Error deleting comment:', error);
-//       return res.status(500).send('Error deleting comment');
-//     }
+  const commentId = req.params.id;
+  const query = 'SELECT * FROM comments WHERE id = ?';
+  connection.query(query, [commentId], (error, results) => {
+      if (error) {
+          console.error('Error fetching comment:', error);
+          return res.status(500).send('Error fetching comment');
+      }
 
-//     res.redirect('/admin_dashboard'); // Adjust the redirect URL as needed
-//   });
-// });
+      if (results.length === 0) {
+          return res.status(404).send('Comment not found');
+      }
+
+      res.render('edit_comment', { comment: results[0] });
+  });
+});
+
+// Route to handle the submission of edited comments
+router.post('/edit_comment/:id', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+      return res.status(403).send('Access denied');
+  }
+
+  const commentId = req.params.id;
+  const updatedComment = req.body.comment;
+
+  const query = 'UPDATE comments SET comment = ? WHERE id = ?';
+  connection.query(query, [updatedComment, commentId], (error, results) => {
+      if (error) {
+          console.error('Error updating comment:', error);
+          return res.status(500).send('Error updating comment');
+      }
+
+      res.redirect('/admin_dashboard');
+  });
+});
+
 
 // Route to delete a comment
 router.post('/delete_comment/:id', (req, res) => {
