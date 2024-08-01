@@ -202,6 +202,7 @@ router.post('/add_comment', (req, res) => {
   });
 });
 
+// Assuming Express is set up and 'connection' is your MySQL connection object
 router.delete('/delete_comment/:id', (req, res) => {
   const commentId = req.params.id;
 
@@ -212,9 +213,14 @@ router.delete('/delete_comment/:id', (req, res) => {
       return res.status(500).send('Error deleting comment');
     }
 
+    if (results.affectedRows === 0) {
+      return res.status(404).send('Comment not found');
+    }
+
     res.status(200).send('Comment deleted successfully');
   });
 });
+
 
 
 router.get('/logout', (req, res) => {
