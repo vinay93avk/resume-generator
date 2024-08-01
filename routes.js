@@ -203,17 +203,32 @@ router.post('/add_comment', (req, res) => {
 });
 
 // Assuming Express is set up and 'connection' is your MySQL connection object
+// router.post('/delete_comment/:id', (req, res) => {
+//   const commentId = req.params.id;
+
+//   const query = 'DELETE FROM comments WHERE id = ?';
+//   connection.query(query, [commentId], (error) => {
+//     if (error) {
+//       console.error('Error deleting comment:', error);
+//       return res.status(500).send('Error deleting comment');
+//     }
+
+//     res.redirect('/admin_dashboard'); // Adjust the redirect URL as needed
+//   });
+// });
+
 router.post('/delete_comment/:id', (req, res) => {
   const commentId = req.params.id;
 
-  const query = 'DELETE FROM comments WHERE id = ?';
-  connection.query(query, [commentId], (error) => {
+  const query = 'DELETE FROM comments WHERE id = ? AND admin_id = ?';
+  connection.query(query, [commentId, req.session.user.id], (error) => {
     if (error) {
       console.error('Error deleting comment:', error);
       return res.status(500).send('Error deleting comment');
     }
 
-    res.status(200).send('Comment deleted successfully');
+    // Render a confirmation page after deletion
+    res.redirect('/admin_dashboard'); // You can change this view name as needed
   });
 });
 
