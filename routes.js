@@ -230,11 +230,22 @@ router.post('/delete_comment', (req, res) => {
 
   const { comment_id } = req.body;
 
+  // Ensure that comment_id is provided
+  if (!comment_id) {
+    return res.status(400).send('Comment ID is required');
+  }
+
+  // SQL query to delete the comment by ID
   const query = 'DELETE FROM comments WHERE id = ?';
   connection.query(query, [comment_id], (error, results) => {
     if (error) {
       console.error('Error deleting comment:', error);
       return res.status(500).send('Error deleting comment');
+    }
+
+    // Check if any rows were affected (i.e., a comment was actually deleted)
+    if (results.affectedRows === 0) {
+      return res.status(404).send('Comment not found');
     }
 
     res.redirect('/admin_dashboard');
