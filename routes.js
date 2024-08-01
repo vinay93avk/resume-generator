@@ -217,7 +217,12 @@ router.post('/add_comment', (req, res) => {
 //   });
 // });
 
+// Route to delete a comment
 router.post('/delete_comment/:id', (req, res) => {
+  if (!req.session.user || !req.session.user.is_admin) {
+    return res.status(403).send('Access denied');
+  }
+
   const commentId = req.params.id;
 
   const query = 'DELETE FROM comments WHERE id = ? AND admin_id = ?';
@@ -227,10 +232,10 @@ router.post('/delete_comment/:id', (req, res) => {
       return res.status(500).send('Error deleting comment');
     }
 
-    // Render a confirmation page after deletion
-    res.redirect('/admin_dashboard'); // You can change this view name as needed
+    res.redirect('/admin_dashboard');
   });
 });
+
 
 
 
