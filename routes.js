@@ -202,53 +202,17 @@ router.post('/add_comment', (req, res) => {
   });
 });
 
+router.delete('/delete_comment/:id', (req, res) => {
+  const commentId = req.params.id;
 
-// Route to edit a comment
-router.post('/edit_comment', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
-    return res.status(403).send('Access denied');
-  }
-
-  const { comment_id, updated_comment } = req.body;
-
-  const query = 'UPDATE comments SET comment = ? WHERE id = ?';
-  connection.query(query, [updated_comment, comment_id], (error, results) => {
-    if (error) {
-      console.error('Error editing comment:', error);
-      return res.status(500).send('Error editing comment');
-    }
-
-    res.redirect('/admin_dashboard');
-  });
-});
-
-// Route to delete a comment
-router.post('/delete_comment', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
-    return res.status(403).send('Access denied');
-  }
-
-  const { comment_id } = req.body;
-
-  // Ensure that comment_id is provided
-  if (!comment_id) {
-    return res.status(400).send('Comment ID is required');
-  }
-
-  // SQL query to delete the comment by ID
   const query = 'DELETE FROM comments WHERE id = ?';
-  connection.query(query, [comment_id], (error, results) => {
+  connection.query(query, [commentId], (error, results) => {
     if (error) {
       console.error('Error deleting comment:', error);
       return res.status(500).send('Error deleting comment');
     }
 
-    // Check if any rows were affected (i.e., a comment was actually deleted)
-    if (results.affectedRows === 0) {
-      return res.status(404).send('Comment not found');
-    }
-
-    res.redirect('/admin_dashboard');
+    res.status(200).send('Comment deleted successfully');
   });
 });
 
