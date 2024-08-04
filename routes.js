@@ -1291,17 +1291,19 @@ router.get('/user/:email/certificates', (req, res) => {
 
   router.get('/edit_experience/:userId', async (req, res) => {
     const { userId } = req.params;
+    console.log("Received userId:", userId);  // Debug log to check the received userId
+
     try {
-      const experiencesQuery = `SELECT * FROM Experience WHERE user_id = ? AND description IS NOT NULL AND TRIM(description) <> ''`;
-      const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
+        const experiencesQuery = `SELECT * FROM Experience WHERE user_id = ? AND description IS NOT NULL AND TRIM(description) <> ''`;
+        const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
+
+        console.log("Fetched experiences:", experiences); // Log fetched data for debugging
 
         if (experiences.length === 0) {
-            return res.status(404).send('No experiences found');
+            return res.status(404).send('No experiences found for user ID: ' + userId);
         }
 
-        // Assuming you already have user data or fetch it similarly
         const user = { id: userId }; // Placeholder for user data
-
         res.render('edit_experience', { user, experiences });
     } catch (error) {
         console.error('Error fetching experiences:', error);
