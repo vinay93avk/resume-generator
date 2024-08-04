@@ -76,7 +76,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Invalid email or password');
     }
 
-    req.session.user = user; // Save the user information in the session
+    req.session.user_id = user.id; // Save the user information in the session using user_id
 
     // Insert login time into Sessions table
     const loginTime = new Date();
@@ -112,11 +112,11 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/show_resume', (req, res) => {
-  if (!req.session.user) {
+  if (!req.session.user_id) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
 
-  const userId = req.session.user.id;
+  const user_id = req.session.user_id;
 
   const query = `
     SELECT resumes.id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
@@ -126,7 +126,7 @@ router.get('/show_resume', (req, res) => {
     ORDER BY resumes.created_at DESC, comments.created_at ASC
     LIMIT 1
   `;
-  connection.query(query, [userId], (error, results) => {
+  connection.query(query, [user_id], (error, results) => {
     if (error) {
       console.error('Error fetching resume and comments:', error);
       return res.status(500).send('Error fetching resume and comments');
@@ -145,8 +145,8 @@ router.get('/show_resume', (req, res) => {
 
 
 router.get('/admin_dashboard', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
-    return res.status(403).send('Access denied');
+  if (!req.session.user_id || !req.session.user_id.is_admin) {
+    return res.status (403).send('Access denied');
   }
 
   const query = `
@@ -159,7 +159,7 @@ router.get('/admin_dashboard', (req, res) => {
   connection.query(query, (error, results) => {
     if (error) {
       console.error('Error fetching all resumes:', error);
-      return res.status(500).send('Error fetching all resumes');
+      return res.status (500).send('Error fetching all resumes');
     }
 
     const resumes = results.reduce((acc, row) => {
@@ -183,13 +183,14 @@ router.get('/admin_dashboard', (req, res) => {
 });
 
 
+
 router.post('/add_comment', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
+  if (!req.session.user_id || !req.session.user_id.is_admin) {
     return res.status(403).send('Access denied');
   }
 
   const { resume_id, comment } = req.body;
-  const admin_id = req.session.user.id;
+  const admin_id = req.session.user_id;
 
   const query = 'INSERT INTO comments (resume_id, admin_id, comment) VALUES (?, ?, ?)';
   connection.query(query, [resume_id, admin_id, comment], (error, results) => {
@@ -204,7 +205,7 @@ router.post('/add_comment', (req, res) => {
 
 // Route to display the edit form
 router.get('/edit_comment/:id', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
+  if (!req.session.user_id || !req.session.user_id.is_admin) {
       return res.status(403).send('Access denied');
   }
 
@@ -226,7 +227,7 @@ router.get('/edit_comment/:id', (req, res) => {
 
 // Route to handle the submission of edited comments
 router.post('/edit_comment/:id', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
+  if (!req.session.user_id || !req.session.user_id.is_admin) {
       return res.status(403).send('Access denied');
   }
 
@@ -247,7 +248,7 @@ router.post('/edit_comment/:id', (req, res) => {
 
 // Route to delete a comment
 router.post('/delete_comment/:id', (req, res) => {
-  if (!req.session.user || !req.session.user.is_admin) {
+  if (!req.session.user_id || !req.session.user_id.is_admin) {
     return res.status(403).send('Access denied');
   }
 
@@ -268,8 +269,8 @@ router.post('/delete_comment/:id', (req, res) => {
 
 
 router.get('/logout', (req, res) => {
-  if (req.session.user) {
-    const user = req.session.user;
+  if (req.session.user_id) {
+    const user = req.session.user_id;
     const logoutTime = new Date();
     console.log(`Updating logout time for user: ${user.id}, email: ${user.email}, logoutTime: ${logoutTime}`);
 
@@ -294,10 +295,10 @@ router.get('/logout', (req, res) => {
 });
 
 router.get('/resume', (req, res) => {
-  if (!req.session.user) {
+  if (!req.session.user_id) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
-  res.render('resume', { user: req.session.user });
+  res.render('resume', { user: req.session.user_id });
 });
 
 // Function to handle splitting skills
@@ -423,13 +424,13 @@ router.post('/generate_resume', async (req, res) => {
     experience_end_date, description, skills, linkedUrl, jobDescription,
     certificate_name, issuing_organization, issue_date, expiration_date, project_name, github_link
   } = req.body;
-  const { firstName, lastName, email, phone } = req.session.user;
+  const { firstName, lastName, email, phone } = req.session.user_id;
 
   if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
     return res.status(400).send('All fields are required');
   }
 
-  const user = req.session.user;
+  const user = req.session.user_id;
 
   // Parsing Education, Experience, Skills, Certificates, and Projects
   const parsedEducation = parseEducation(degree, institution, startDate, endDate);
@@ -640,14 +641,14 @@ router.post('/generate_resume', async (req, res) => {
 });
   
   router.get('/download_resume', async (req, res) => {
-    if (!req.session.user) {
+    if (!req.session.user_id) {
       return res.redirect('/login'); // Redirect to login if the user is not logged in
     }
   
-    const userId = req.session.user.id;
+    const user_id = req.session.user_id;
   
     const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-    connection.query(query, [userId], (error, results) => {
+    connection.query(query, [user_id], (error, results) => {
       if (error) {
         console.error('Error fetching resume URL:', error);
         return res.status(500).send('Error fetching resume URL');
@@ -1289,9 +1290,9 @@ router.get('/user/:email/certificates', (req, res) => {
     });
   });
 
-  router.get('/edit_experience/:userId', async (req, res) => {
-    const { userId } = req.params;
-    console.log("Received userId:", userId);  // Debug log to check the received userId
+  router.get('/edit_experience/:user_id', async (req, res) => {
+    const { user_id } = req.params;
+    console.log("Received user_id:", user_id);  // Debug log to check the received userId
 
     try {
         // Join Experience and resumes tables to ensure correct user_id is used
@@ -1301,16 +1302,16 @@ router.get('/user/:email/certificates', (req, res) => {
             JOIN resumes ON Experience.user_id = resumes.user_id
             WHERE resumes.user_id = ? AND Experience.description IS NOT NULL AND TRIM(Experience.description) <> ''
         `;
-        const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
+        const [experiences] = await connection.promise().query(experiencesQuery, [user_id]);
 
         console.log("Fetched experiences:", experiences); // Log fetched data for debugging
 
         if (experiences.length === 0) {
-            return res.status(404).send('No experiences found for user ID: ' + userId);
+            return res.status(404).send('No experiences found for user ID: ' + user_id);
         }
 
         // Utilize user details in rendering if necessary
-        const user = { user_id: userId }; // Using user_id to maintain consistency
+        const user = { user_id: user_id }; // Using user_id to maintain consistency
         res.render('edit_experience', { user, experiences });
     } catch (error) {
         console.error('Error fetching experiences:', error);
@@ -1319,11 +1320,11 @@ router.get('/user/:email/certificates', (req, res) => {
 });
 
 
-router.post('/update_experience/:userId', async (req, res) => {
-  const { userId } = req.params;
+router.post('/update_experience/:user_id', async (req, res) => {
+  const { user_id } = req.params;
 
   // Check user authorization (this is pseudocode; implement according to your auth system)
-  if (!req.isAuthenticated || req.user.id !== userId) {
+  if (!req.isAuthenticated || req.user.id !== user_id) {
     return res.status(403).send('Unauthorized access.');
   }
 
@@ -1340,7 +1341,7 @@ router.post('/update_experience/:userId', async (req, res) => {
               }
 
               const updateQuery = `UPDATE Experience SET description = ? WHERE id = ? AND user_id = ?`;
-              promises.push(connection.promise().query(updateQuery, [description, expId, userId]));
+              promises.push(connection.promise().query(updateQuery, [description, expId, user_id]));
           }
       });
 
