@@ -1289,171 +1289,59 @@ router.get('/user/:email/certificates', (req, res) => {
     });
   });
 
-// Show edit resume form
-router.get('/edit_resume/:id', (req, res) => {
-  const resumeId = req.params.id;
-  const userId = req.session.user.id;
+  router.get('/edit_experience/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const experiencesQuery = `SELECT * FROM Experience WHERE user_id = ?`;
+        const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
 
-  const query = `
-    SELECT resumes.*, 
-          GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
-          GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
-          GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
-          GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates,
-          GROUP_CONCAT(DISTINCT s.skill_name ORDER BY s.skill_name SEPARATOR ', ') AS skills
-    FROM resumes
-    LEFT JOIN Education e ON resumes.user_id = e.user_id
-    LEFT JOIN Projects p ON resumes.user_id = p.user_id
-    LEFT JOIN Experience exp ON resumes.user_id = exp.user_id
-    LEFT JOIN Certificates c ON resumes.user_id = c.user_id
-    LEFT JOIN Skills s ON resumes.user_id = s.user_id
-    WHERE resumes.id = ? AND resumes.user_id = ?
-    GROUP BY resumes.id
-  `;
+        if (experiences.length === 0) {
+            return res.status(404).send('No experiences found');
+        }
 
-  connection.query(query, [resumeId, userId], (error, results) => {
-    if (error) {
-      console.error('Error fetching resume details:', error);
-      return res.status(500).send('Error fetching resume details');
+        // Assuming you already have user data or fetch it similarly
+        const user = { id: userId }; // Placeholder for user data
+
+        res.render('edit_experience', { user, experiences });
+    } catch (error) {
+        console.error('Error fetching experiences:', error);
+        res.status(500).send('Error fetching experiences');
     }
-
-    if (results.length === 0) {
-      return res.status(404).send('Resume not found');
-    }
-
-    const resume = results[0];
-
-    resume.education = resume.education ? resume.education.split(';;').map(edu => {
-      const [degree, institution, start_date, end_date] = edu.split(':');
-      return { degree, institution, start_date, end_date };
-    }) : [];
-
-    resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
-      const [project_name, github_link] = proj.split(':');
-      return { project_name, github_link };
-    }) : [];
-
-    resume.experience = resume.experience ? resume.experience.split(';;').map(exp => {
-      const [company_name, role, start_date, end_date, description] = exp.split(':');
-      return { company_name, role, start_date, end_date, description };
-    }) : [];
-
-    resume.certificates = resume.certificates ? resume.certificates.split(';;').map(cert => {
-      const [certificate_name, issuing_organization, issue_date, expiration_date] = cert.split(':');
-      return { certificate_name, issuing_organization, issue_date, expiration_date };
-    }) : [];
-
-    // Ensuring skills is an array of strings
-    resume.skills = resume.skills ? resume.skills.split(',').map(skill => skill.trim()) : [];
-
-    res.render('edit_resume', { resume });
-  });
 });
 
+router.post('/update_experience/:userId', async (req, res) => {
+  const { userId } = req.params;
 
-router.post('/edit_resume/:id', async (req, res) => {
-  const resumeId = req.params.id;
-  const user = req.session.user;
-  const { projectNames, githubLinks } = req.body;
-
-  // Debugging output before calling parseProjects
-  console.log('Debugging parseProjects call:', { projectNames, githubLinks });
+  // Check user authorization (this is pseudocode; implement according to your auth system)
+  if (!req.isAuthenticated || req.user.id !== userId) {
+    return res.status(403).send('Unauthorized access.');
+  }
 
   try {
-    const parsedProjects = parseProjects(projectNames, githubLinks);
-    // Proceed with using parsedProjects
+      const promises = [];
+      Object.keys(req.body).forEach(key => {
+          if (key.startsWith('description_')) {
+              const expId = key.split('_')[1];
+              const description = req.body[key].trim(); // Trim and potentially sanitize inputs
+
+              // Simple input validation example
+              if (description.length < 10) { // Assume a valid description must be at least 10 characters long
+                throw new Error('Description too short.');
+              }
+
+              const updateQuery = `UPDATE Experience SET description = ? WHERE id = ? AND user_id = ?`;
+              promises.push(connection.promise().query(updateQuery, [description, expId, userId]));
+          }
+      });
+
+      await Promise.all(promises);
+      res.redirect('/profile'); // Redirect to a profile or review page
   } catch (error) {
-    console.error('Error parsing projects:', error);
-    res.status(500).send('Internal Server Error');
-  }
-
-  const { companyNames, roles, startDates, endDates, descriptions } = req.body;  // Example for fetching from request body
-
-  // Debugging before passing to the function
-  console.log('Received data:', { companyNames, roles, startDates, endDates, descriptions });
-
-  const parsedExperience = parseExperience(companyNames, roles, startDates, endDates, descriptions);
-
-  if (!user || !user.id) {
-    return res.status(403).send('User not authenticated or session expired');
-  }
-
-  const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
-
-  try {
-    await connection.promise().beginTransaction();
-
-    // Update resume core details
-    const updateResumeQuery = 'UPDATE resumes SET linkedUrl = ? WHERE id = ?';
-    await connection.promise().query(updateResumeQuery, [linkedUrl, resumeId]);
-
-    // Handle skills update
-    const parsedSkills = parseSkills(skills);
-    const deleteOldSkills = 'DELETE FROM Skills WHERE user_id = ?';
-    await connection.promise().query(deleteOldSkills, [user.id]);
-    const insertSkillsQuery = 'INSERT INTO Skills (user_id, skill_name, proficiency_level, email) VALUES (?, ?, ?, ?)';
-    for (const skill of parsedSkills) {
-      await connection.promise().query(insertSkillsQuery, [user.id, skill.skill_name, skill.proficiency_level, user.email]);
-    }
-
-    // Update Experience
-    const parsedExperience = parseExperience(experience);
-    const deleteOldExperience = 'DELETE FROM Experience WHERE user_id = ?';
-    await connection.promise().query(deleteOldExperience, [user.id]);
-    const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    for (const exp of parsedExperience) {
-      await connection.promise().query(insertExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, user.email]);
-    }
-
-    // Handle projects update
-    const parsedProjects = parseProjects(projects);
-    const deleteOldProjects = 'DELETE FROM Projects WHERE user_id = ?';
-    await connection.promise().query(deleteOldProjects, [user.id]);
-    const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
-    for (const project of parsedProjects) {
-      await connection.promise().query(insertProjectsQuery, [user.id, project.project_name, project.github_link]);
-    }
-
-    // Handle certificates update
-    const parsedCertificates = parseCertificates(certificates);
-    const deleteOldCertificates = 'DELETE FROM Certificates WHERE user_id = ?';
-    await connection.promise().query(deleteOldCertificates, [user.id]);
-    const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES (?, ?, ?, ?, ?, ?)';
-    for (const cert of parsedCertificates) {
-      await connection.promise().query(insertCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, user.email]);
-    }
-
-    await connection.promise().commit();
-
-    res.status(200).send('Resume updated successfully.');
-  } catch (error) {
-    await connection.promise().rollback();
-    console.error('Error during the transaction:', error);
-    res.status(500).send('Failed to update resume due to internal server error.');
+      console.error('Error updating experiences:', error);
+      res.status(500).send('Failed to update experiences: ' + error.message);
   }
 });
 
-
-
-
-
-
-
-// Handle resume deletion
-router.post('/delete_resume/:id', (req, res) => {
-  const resumeId = req.params.id;
-
-  const query = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
-  connection.query(query, [resumeId, req.session.user.id], (error) => {
-    if (error) {
-      console.error('Error deleting resume:', error);
-      return res.status(500).send('Error deleting resume');
-    }
-
-    // Render a confirmation page after deletion
-    res.render('resume_deleted'); // You can change this view name as needed
-  });
-});
 
 
   

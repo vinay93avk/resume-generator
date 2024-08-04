@@ -39,7 +39,8 @@
         <% } %>
 
         <div class="action-buttons">
-            <a href="/edit_resume/<%= resumeId %>" class="btn">Edit Resume</a>
+            <!-- Update the link to point to edit experience page -->
+            <a href="/edit_experience/<%= resumeId %>" class="btn">Edit Experience</a>
             <form action="/delete_resume/<%= resumeId %>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this resume?');">
                 <button type="submit" class="btn">Delete Resume</button>
             </form>
