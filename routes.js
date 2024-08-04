@@ -76,12 +76,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Invalid email or password');
     }
 
-    req.session.user_id = user.id; // Save the user information in the session using user_id
+    req.session.user_id = user.user_id; // Save the user information in the session using user_id
 
     // Insert login time into Sessions table
     const loginTime = new Date();
     const insertSessionQuery = 'INSERT INTO Sessions (user_id, email, login_time) VALUES (?, ?, ?)';
-    connection.query(insertSessionQuery, [user.id, email, loginTime], (sessionError) => {
+    connection.query(insertSessionQuery, [user.user_id, email, loginTime], (sessionError) => {
       if (sessionError) {
         console.error('Error inserting session:', sessionError);
         return res.status(500).send('Error inserting session');
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
       } else {
         // Check if resume exists
         const checkResumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-        connection.query(checkResumeQuery, [user.id], (resumeError, resumeResults) => {
+        connection.query(checkResumeQuery, [user.user_id], (resumeError, resumeResults) => {
           if (resumeError) {
             console.error('Error checking for resume:', resumeError);
             return res.status(500).send('Error checking for resume');
@@ -272,10 +272,10 @@ router.get('/logout', (req, res) => {
   if (req.session.user_id) {
     const user = req.session.user_id;
     const logoutTime = new Date();
-    console.log(`Updating logout time for user: ${user.id}, email: ${user.email}, logoutTime: ${logoutTime}`);
+    console.log(`Updating logout time for user: ${user.user_id}, email: ${user.email}, logoutTime: ${logoutTime}`);
 
     const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND email = ? AND logout_time IS NULL';
-    connection.query(updateLogoutQuery, [logoutTime, user.id, user.email], (error, results) => {
+    connection.query(updateLogoutQuery, [logoutTime, user.user_id, user.email], (error, results) => {
       if (error) {
         console.error('Error updating session:', error);
         return res.status(500).send('Error updating session');
@@ -453,7 +453,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Education
     const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
-    const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
+    const educationValues = parsedEducation.map(edu => [user.user_id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
     connection.query(insertEducationQuery, [educationValues], (error, results) => {
       if (error) {
         console.error('Error saving education:', error);
@@ -464,7 +464,7 @@ router.post('/generate_resume', async (req, res) => {
     // Inserting Experience
     const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description, email) VALUES ?';
     const experienceValues = parsedExperience.map(exp => [
-      user.id,
+      user.user_id,
       exp.company_name,
       exp.role,
       exp.start_date,
@@ -484,7 +484,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Skills
     const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
-    const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
+    const skillValues = parsedSkills.map(skill => [user.user_id, email, skill.skill_name, skill.proficiency_level]);
     connection.query(insertSkillsQuery, [skillValues], (error, results) => {
       if (error) {
         console.error('Error saving skill:', error);
@@ -494,7 +494,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Certificates
     const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
-    const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
+    const certificateValues = parsedCertificates.map(cert => [user.user_id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
     connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
       if (error) {
         console.error('Error saving certificate:', error);
@@ -504,7 +504,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Projects
     const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?';
-    const projectValues = parsedProjects.map(project => [user.id, project.project_name, project.github_link]);
+    const projectValues = parsedProjects.map(project => [user.user_id, project.project_name, project.github_link]);
     connection.query(insertProjectsQuery, [projectValues], (error, results) => {
       if (error) {
         console.error('Error saving projects:', error);
@@ -518,7 +518,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting into resumes table
     const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
+    const resumeValues = [user.user_id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
     connection.query(insertResumeQuery, resumeValues, (error, results) => {
       if (error) {
         console.error('Error saving resume:', error);
@@ -588,7 +588,7 @@ router.post('/generate_resume', async (req, res) => {
           // Upload PDF to S3
           const s3Params = {
             Bucket: 'resume-generator-ocu',
-            Key: `resumes/${user.id}-${Date.now()}.pdf`,
+            Key: `resumes/${user.user_id}-${Date.now()}.pdf`,
             Body: pdfBuffer,
             ContentType: 'application/pdf'
           };
@@ -1324,7 +1324,7 @@ router.post('/update_experience/:user_id', async (req, res) => {
   const { user_id } = req.params;
 
   // Check user authorization (this is pseudocode; implement according to your auth system)
-  if (!req.isAuthenticated || req.user.id !== user_id) {
+  if (!req.isAuthenticated || req.user.user_id !== user_id) {
     return res.status(403).send('Unauthorized access.');
   }
 
