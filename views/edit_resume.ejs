@@ -1,102 +1,154 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Edit Resume</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Resume</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script>
+        function addCertificate() {
+            const container = document.getElementById("certificates-container");
+            const certificateDiv = document.createElement("div");
+            certificateDiv.innerHTML = `
+                <input type="text" name="certificate_name[]" placeholder="Certificate Name" required><br>
+                <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" required><br>
+                <input type="date" name="issue_date[]" placeholder="Issue Date" required><br>
+                <input type="date" name="expiration_date[]" placeholder="Expiration Date" required><br>
+            `;
+            container.appendChild(certificateDiv);
+        }
+
+        function addEducation() {
+            const container = document.getElementById("education-container");
+            const educationDiv = document.createElement("div");
+            educationDiv.innerHTML = `
+                <input type="text" name="degree[]" placeholder="Degree" required><br>
+                <input type="text" name="institution[]" placeholder="Institution" required><br>
+                <input type="date" name="startDate[]" placeholder="Start Date" required><br>
+                <input type="date" name="endDate[]" placeholder="End Date" required><br>
+            `;
+            container.appendChild(educationDiv);
+        }
+
+        function addExperience() {
+            const container = document.getElementById("experience-container");
+            const experienceDiv = document.createElement("div");
+            experienceDiv.innerHTML = `
+                <input type="text" name="company_name[]" placeholder="Company Name" required><br>
+                <input type="text" name="role[]" placeholder="Role" required><br>
+                <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" required><br>
+                <input type="date" name="experience_end_date[]" placeholder="Experience End Date" required><br>
+                <textarea name="description[]" placeholder="Experience Description" required></textarea><br>
+            `;
+            container.appendChild(experienceDiv);
+        }
+
+        function addProject() {
+            const container = document.getElementById("projects-container");
+            const projectDiv = document.createElement("div");
+            projectDiv.innerHTML = `
+                <input type="text" name="project_name[]" placeholder="Project Name" required><br>
+                <input type="url" name="github_link[]" placeholder="GitHub Link" required><br>
+            `;
+            container.appendChild(projectDiv);
+        }
+    </script>
 </head>
 <body>
-  <h1>Edit Resume</h1>
-  <form action="/update_generated_resume/<%= resume.id %>" method="POST">
-    <!-- User Info -->
-    <label for="firstName">First Name:</label>
-    <input type="text" id="firstName" name="firstName" value="<%= resume.firstName %>">
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1>Edit Resume</h1>
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        <h2>Edit Your Resume</h2>
+        <form action="/edit_resume/<%= resume.id %>" method="post">
+            <section>
+                <h3>Personal Information <span class="required-indicator">*</span></h3>
+                <input type="text" name="firstName" value="<%= resume.firstName %>" required><br>
+                <input type="text" name="lastName" value="<%= resume.lastName %>" required><br>
+                <input type="email" name="email" value="<%= resume.email %>" required><br>
+                <input type="text" name="phone" value="<%= resume.phone %>" required><br>
+            </section>
 
-    <label for="lastName">Last Name:</label>
-    <input type="text" id="lastName" name="lastName" value="<%= resume.lastName %>">
+            <section>
+                <h3>Education <span class="required-indicator">*</span></h3>
+                <div id="education-container">
+                    <% resume.education.forEach(function(edu) { %>
+                        <div>
+                            <input type="text" name="degree[]" placeholder="Degree" value="<%= edu.degree %>" required><br>
+                            <input type="text" name="institution[]" placeholder="Institution" value="<%= edu.institution %>" required><br>
+                            <input type="date" name="startDate[]" placeholder="Start Date" value="<%= edu.start_date %>" required><br>
+                            <input type="date" name="endDate[]" placeholder="End Date" value="<%= edu.end_date %>" required><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addEducation()">Add Another Education</button><br><br>
+            </section>
 
-    <label for="email">Email:</label>
-    <input type="email" id="email" name="email" value="<%= resume.email %>">
+            <section>
+                <h3>LinkedIn <span class="required-indicator">*</span></h3>
+                <input type="text" name="linkedUrl" value="<%= resume.linkedUrl %>" placeholder="LinkedIn URL"><br>
+            </section>
 
-    <label for="phone">Phone:</label>
-    <input type="tel" id="phone" name="phone" value="<%= resume.phone %>">
+            <section>
+                <h3>Projects <span class="required-indicator">*</span></h3>
+                <div id="projects-container">
+                    <% resume.projects.forEach(function(project) { %>
+                        <div>
+                            <input type="text" name="project_name[]" placeholder="Project Name" value="<%= project.project_name %>" required><br>
+                            <input type="url" name="github_link[]" placeholder="GitHub Link" value="<%= project.github_link %>" required><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addProject()">Add Another Project</button><br><br>
+            </section>
 
-    <!-- Skills -->
-    <label for="skills">Skills:</label>
-    <input type="text" id="skills" name="skills" value="<%= resume.skills.join(', ') %>">
+            <section>
+                <h3>Experience <span class="required-indicator">*</span></h3>
+                <div id="experience-container">
+                    <% resume.experience.forEach(function(exp) { %>
+                        <div>
+                            <input type="text" name="company_name[]" placeholder="Company Name" value="<%= exp.company_name %>" required><br>
+                            <input type="text" name="role[]" placeholder="Role" value="<%= exp.role %>" required><br>
+                            <input type="date" name="experience_start_date[]" placeholder="Experience Start Date" value="<%= exp.start_date %>" required><br>
+                            <input type="date" name="experience_end_date[]" placeholder="Experience End Date" value="<%= exp.end_date %>" required><br>
+                            <textarea name="description[]" placeholder="Experience Description" required><%= exp.description ? exp.description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '' %></textarea><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addExperience()">Add Another Experience</button><br><br>
+            </section>            
 
-    <!-- LinkedIn URL -->
-    <label for="linkedUrl">LinkedIn URL:</label>
-    <input type="url" id="linkedUrl" name="linkedUrl" value="<%= resume.linkedUrl %>">
+            <section>
+                <h3>Skills <span class="required-indicator">*</span></h3>
+                <input type="text" name="skills" placeholder="Skills (format: skill:proficiency_level, ...)" value="<%= resume.skills %>" required><br>
+            </section>
 
-    <!-- Education -->
-    <h3>Education</h3>
-    <% resume.education.forEach((edu, index) => { %>
-      <div>
-        <label for="degree_<%= index %>">Degree:</label>
-        <input type="text" id="degree_<%= index %>" name="education[<%= index %>][degree]" value="<%= edu.degree %>">
-        
-        <label for="institution_<%= index %>">Institution:</label>
-        <input type="text" id="institution_<%= index %>" name="education[<%= index %>][institution]" value="<%= edu.institution %>">
-        
-        <label for="start_date_<%= index %>">Start Date:</label>
-        <input type="date" id="start_date_<%= index %>" name="education[<%= index %>][start_date]" value="<%= edu.start_date %>">
-        
-        <label for="end_date_<%= index %>">End Date:</label>
-        <input type="date" id="end_date_<%= index %>" name="education[<%= index %>][end_date]" value="<%= edu.end_date %>">
-      </div>
-    <% }) %>
+            <section>
+                <h3>Job Description <span class="required-indicator">*</span></h3>
+                <textarea name="jobDescription" placeholder="Job Description" required><%= resume.jobDescription %></textarea><br>
+            </section>
 
-    <!-- Experience -->
-    <h3>Experience</h3>
-    <% resume.experience.forEach((exp, index) => { %>
-      <div>
-        <label for="company_name_<%= index %>">Company Name:</label>
-        <input type="text" id="company_name_<%= index %>" name="experience[<%= index %>][company_name]" value="<%= exp.company_name %>">
-        
-        <label for="role_<%= index %>">Role:</label>
-        <input type="text" id="role_<%= index %>" name="experience[<%= index %>][role]" value="<%= exp.role %>">
-        
-        <label for="start_date_<%= index %>">Start Date:</label>
-        <input type="date" id="start_date_<%= index %>" name="experience[<%= index %>][start_date]" value="<%= exp.start_date %>">
-        
-        <label for="end_date_<%= index %>">End Date:</label>
-        <input type="date" id="end_date_<%= index %>" name="experience[<%= index %>][end_date]" value="<%= exp.end_date %>">
-        
-        <label for="description_<%= index %>">Description:</label>
-        <textarea id="description_<%= index %>" name="experience[<%= index %>][description]"><%= exp.description %></textarea>
-      </div>
-    <% }) %>
+            <section>
+                <h3>Certificates <span class="required-indicator">*</span></h3>
+                <div id="certificates-container">
+                    <% resume.certificates.forEach(function(cert) { %>
+                        <div>
+                            <input type="text" name="certificate_name[]" placeholder="Certificate Name" value="<%= cert.certificate_name %>" required><br>
+                            <input type="text" name="issuing_organization[]" placeholder="Issuing Organization" value="<%= cert.issuing_organization %>" required><br>
+                            <input type="date" name="issue_date[]" placeholder="Issue Date" value="<%= cert.issue_date %>" required><br>
+                            <input type="date" name="expiration_date[]" placeholder="Expiration Date" value="<%= cert.expiration_date %>" required><br>
+                        </div>
+                    <% }); %>
+                </div>
+                <button type="button" onclick="addCertificate()">Add Another Certificate</button><br><br>
+            </section>
 
-    <!-- Projects -->
-    <h3>Projects</h3>
-    <% resume.projects.forEach((proj, index) => { %>
-      <div>
-        <label for="project_name_<%= index %>">Project Name:</label>
-        <input type="text" id="project_name_<%= index %>" name="projects[<%= index %>][project_name]" value="<%= proj.project_name %>">
-        
-        <label for="github_link_<%= index %>">GitHub Link:</label>
-        <input type="url" id="github_link_<%= index %>" name="projects[<%= index %>][github_link]" value="<%= proj.github_link %>">
-      </div>
-    <% }) %>
-
-    <!-- Certificates -->
-    <h3>Certificates</h3>
-    <% resume.certificates.forEach((cert, index) => { %>
-      <div>
-        <label for="certificate_name_<%= index %>">Certificate Name:</label>
-        <input type="text" id="certificate_name_<%= index %>" name="certificates[<%= index %>][certificate_name]" value="<%= cert.certificate_name %>">
-        
-        <label for="issuing_organization_<%= index %>">Issuing Organization:</label>
-        <input type="text" id="issuing_organization_<%= index %>" name="certificates[<%= index %>][issuing_organization]" value="<%= cert.issuing_organization %>">
-        
-        <label for="issue_date_<%= index %>">Issue Date:</label>
-        <input type="date" id="issue_date_<%= index %>" name="certificates[<%= index %>][issue_date]" value="<%= cert.issue_date %>">
-        
-        <label for="expiration_date_<%= index %>">Expiration Date:</label>
-        <input type="date" id="expiration_date_<%= index %>" name="certificates[<%= index %>][expiration_date]" value="<%= cert.expiration_date %>">
-      </div>
-    <% }) %>
-
-    <button type="submit">Update Resume</button>
-  </form>
+            <input type="submit" value="Update Resume">
+        </form>
+    </div>
 </body>
 </html>
