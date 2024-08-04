@@ -358,15 +358,22 @@ function parseExperience(companyNames, roles, startDates, endDates, descriptions
 }
 
 function parseProjects(projectNames, githubLinks) {
+  // Ensure both parameters are arrays before proceeding
+  if (!Array.isArray(projectNames) || !Array.isArray(githubLinks)) {
+    console.error("parseProjects: One or more parameters are undefined or not arrays");
+    return []; // Return an empty array or handle as appropriate
+  }
+
   const projects = [];
   for (let i = 0; i < projectNames.length; i++) {
     projects.push({
       project_name: projectNames[i],
-      github_link: githubLinks[i]
+      github_link: githubLinks[i] || '' // Provide a default empty string if undefined
     });
   }
   return projects;
 }
+
 
 
 // Function to generate experience points for each experience
@@ -1333,6 +1340,25 @@ router.get('/edit_resume/:id', (req, res) => {
 router.post('/edit_resume/:id', async (req, res) => {
   const resumeId = req.params.id;
   const user = req.session.user;
+  const { projectNames, githubLinks } = req.body;
+
+  // Debugging output before calling parseProjects
+  console.log('Debugging parseProjects call:', { projectNames, githubLinks });
+
+  try {
+    const parsedProjects = parseProjects(projectNames, githubLinks);
+    // Proceed with using parsedProjects
+  } catch (error) {
+    console.error('Error parsing projects:', error);
+    res.status(500).send('Internal Server Error');
+  }
+
+  const { companyNames, roles, startDates, endDates, descriptions } = req.body;  // Example for fetching from request body
+
+  // Debugging before passing to the function
+  console.log('Received data:', { companyNames, roles, startDates, endDates, descriptions });
+
+  const parsedExperience = parseExperience(companyNames, roles, startDates, endDates, descriptions);
 
   if (!user || !user.id) {
     return res.status(403).send('User not authenticated or session expired');
