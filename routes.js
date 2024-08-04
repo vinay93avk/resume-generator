@@ -310,6 +310,12 @@ function parseSkills(skills) {
 
 // Function to handle splitting certificates
 function parseCertificates(certificateNames, issuingOrganizations, issueDates, expirationDates) {
+  if (!Array.isArray(certificateNames) || !Array.isArray(issuingOrganizations) || 
+      !Array.isArray(issueDates) || !Array.isArray(expirationDates)) {
+    console.error("parseCertificates: One or more parameters are undefined or not arrays");
+    return []; // Return an empty array or handle as appropriate
+  }
+
   const certificates = [];
   for (let i = 0; i < certificateNames.length; i++) {
     certificates.push({
@@ -322,8 +328,15 @@ function parseCertificates(certificateNames, issuingOrganizations, issueDates, e
   return certificates;
 }
 
+
 // Function to handle splitting education
 function parseEducation(degrees, institutions, startDates, endDates) {
+  if (!Array.isArray(degrees) || !Array.isArray(institutions) ||
+      !Array.isArray(startDates) || !Array.isArray(endDates)) {
+    console.error("parseEducation: One or more parameters are undefined or not arrays");
+    return []; // Return an empty array or handle as appropriate
+  }
+
   const education = [];
   for (let i = 0; i < degrees.length; i++) {
     education.push({
@@ -335,6 +348,7 @@ function parseEducation(degrees, institutions, startDates, endDates) {
   }
   return education;
 }
+
 
 // Function to handle splitting experience
 function parseExperience(companyNames, roles, startDates, endDates, descriptions) {
