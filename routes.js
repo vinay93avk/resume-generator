@@ -338,6 +338,12 @@ function parseEducation(degrees, institutions, startDates, endDates) {
 
 // Function to handle splitting experience
 function parseExperience(companyNames, roles, startDates, endDates, descriptions) {
+  // Check if any of the parameters are undefined or not arrays
+  if (!Array.isArray(companyNames) || !Array.isArray(roles) || !Array.isArray(startDates) || !Array.isArray(endDates) || !Array.isArray(descriptions)) {
+    console.error("parseExperience: One or more parameters are undefined or not arrays");
+    return [];  // Return an empty array or handle as appropriate
+  }
+
   const experience = [];
   for (let i = 0; i < companyNames.length; i++) {
     experience.push({
