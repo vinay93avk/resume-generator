@@ -1292,8 +1292,8 @@ router.get('/user/:email/certificates', (req, res) => {
   router.get('/edit_experience/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
-        const experiencesQuery = `SELECT * FROM Experience WHERE user_id = ?`;
-        const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
+      const experiencesQuery = `SELECT * FROM Experience WHERE user_id = ? AND description IS NOT NULL AND TRIM(description) <> ''`;
+      const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
 
         if (experiences.length === 0) {
             return res.status(404).send('No experiences found');
