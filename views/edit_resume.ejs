@@ -52,6 +52,10 @@
             `;
             container.appendChild(projectDiv);
         }
+
+        function confirmUpdate() {
+            return confirm('Are you sure you want to update the resume?');
+        }
     </script>
 </head>
 <body>
@@ -64,7 +68,7 @@
     </header>
     <div class="container">
         <h2>Edit Your Resume</h2>
-        <form action="/edit_resume/<%= resume.id %>" method="post">
+        <form action="/edit_resume/<%= resume.id %>" method="post" onsubmit="return confirmUpdate();">
             <section>
                 <h3>Personal Information <span class="required-indicator">*</span></h3>
                 <input type="text" name="firstName" value="<%= resume.firstName %>" required><br>
