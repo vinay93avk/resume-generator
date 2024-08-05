@@ -5,75 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resume Generator</title>
     <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="/resume_styles.css">
-    <style>
-        /* Additional styles for the modal */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1; 
-            padding-top: 100px; 
-            left: 0;
-            top: 0;
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgb(0,0,0); 
-            background-color: rgba(0,0,0,0.4); 
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .modal-footer .btn {
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .modal-footer .confirm {
-            background-color: #35424a;
-            color: white;
-        }
-
-        .modal-footer .confirm:hover {
-            background-color: #5ab1f5;
-        }
-
-        .modal-footer .cancel {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .modal-footer .cancel:hover {
-            background-color: #c0392b;
-        }
-    </style>
     <script>
         function showSpinner() {
             document.getElementById('spinner').style.display = 'block';
@@ -137,7 +68,9 @@
             modal.style.display = "none";
         }
 
-        function submitForm() {
+        function confirmAction() {
+            closeModal();
+            showSpinner();
             document.getElementById("resume-form").submit();
         }
     </script>
@@ -158,7 +91,7 @@
     <div class="container">
         <h2>Resume Input Form</h2>
     <div id="resume-form">
-        <form action="/generate_resume" method="post" onsubmit="confirmGenerate(); showSpinner(); return false;">
+        <form id="resume-form" action="/generate_resume" method="post" onsubmit="confirmGenerate(); return false;">
             <section>
                 <h3>Personal Information <span class="required-indicator">*</span></h3>
                 <input type="text" name="firstName" placeholder="First Name" value="<%= user.firstName %>" required readonly><br>
@@ -239,17 +172,14 @@
     <div id="spinner" class="spinner"></div>
     </div>
 
-    <!-- The Modal -->
+    <!-- Modal -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <p>Please review the information before proceeding?</p>
-            <div class="modal-footer">
-                <button class="btn cancel" onclick="closeModal()">Cancel</button>
-                <button class="btn confirm" onclick="submitForm()">Confirm</button>
-            </div>
+            <p>Are you sure you want to generate the resume?</p>
+            <button onclick="confirmAction()">Confirm</button>
+            <button onclick="closeModal()">Cancel</button>
         </div>
     </div>
 </body>
 </html>
-
