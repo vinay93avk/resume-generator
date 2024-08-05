@@ -5,13 +5,13 @@
             <h3><%= exp.company_name %> (<%= exp.start_date %> - <%= exp.end_date %>)</h3>
             <p>Original Description:</p>
             <textarea name="original_description_<%= exp.id %>" rows="5" cols="30" readonly><%= exp.description %></textarea>
-            <p>AI-Generated Description (edit if necessary):</p>
-            <!-- Display AI-generated descriptions as bullet points for editing -->
+            <p>AI-Generated Description:</p>
             <textarea name="ai_description_<%= exp.id %>" rows="5" cols="30">
                 <% if (exp.ai_generated_description) { 
-                    exp.ai_generated_description.split(';').forEach(function(point) { 
-                        if (point.trim() !== '') { %><%= point.trim() + '.' %><%
-                        }
+                    const points = exp.ai_generated_description.split(';');
+                    points.forEach(function(point) {
+                        if (point.trim() !== '') { %><%= point.trim() + '.' %>
+                        <% }
                     });
                 } %>
             </textarea>
