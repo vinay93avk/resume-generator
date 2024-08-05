@@ -7,6 +7,7 @@ const AWS = require('aws-sdk');
 const ejs = require('ejs');
 const path = require('path');
 const puppeteer = require('puppeteer');
+const mysql = require('mysql2/promise');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -1336,17 +1337,18 @@ router.post('/edit_resume/:id', async (req, res) => {
   const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
 
   try {
-    await connection.beginTransaction(async (err) => {
+    connection.beginTransaction(async (err) => {
       if (err) {
         console.error('Error starting transaction:', err);
         return res.status(500).send('Error starting transaction');
       }
 
       try {
-        // Parse and update skills
+        // Parse skills
         const parsedSkills = parseSkills(skills || '');
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
+        // Update resume data in the database
         const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
         const resumeValues = [skillsString, linkedUrl, resumeId];
 
@@ -1360,7 +1362,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Update skills
+        // Update or insert skills
         const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
         for (const skill of parsedSkills) {
           await new Promise((resolve, reject) => {
@@ -1374,7 +1376,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         }
 
-        // Update experience
+        // Update or insert experience
         if (experience) {
           const parsedExperience = parseExperience(experience);
           const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
@@ -1391,7 +1393,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           }
         }
 
-        // Update projects
+        // Update or insert projects
         if (projects) {
           const parsedProjects = parseProjects(projects);
           const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
@@ -1408,7 +1410,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           }
         }
 
-        // Update certificates
+        // Update or insert certificates
       if (certificates) {
         const parsedCertificates = parseCertificates(certificates);
         const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
@@ -1425,7 +1427,7 @@ router.post('/edit_resume/:id', async (req, res) => {
         }
         }
 
-        // Fetch updated resume data and render it
+        // Fetch updated resume data
         const query = `
           SELECT resumes.*, 
                 GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
@@ -1588,7 +1590,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     console.error('Error updating resume:', error);
     res.status(500).send('Error updating resume');
   }
-});
+  });
 
 
 // Handle resume deletion
