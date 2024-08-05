@@ -1334,7 +1334,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl, degree, institution, education_start_date, education_end_date, company_name, role, experience_start_date, experience_end_date, description, certificates, projects } = req.body;
+  const { skills, linkedUrl, degree, institution, education_start_date, education_end_date, company_name, role, experience_start_date, experience_end_date, description, project_name, github_link, certificates } = req.body;
 
   function parseExperienceFromForm(companyNames, roles, startDates, endDates, descriptions) {
     const experience = [];
@@ -1363,6 +1363,17 @@ router.post('/edit_resume/:id', async (req, res) => {
     return education;
   }
 
+  function parseProjectsFromForm(projectNames, githubLinks) {
+    const projects = [];
+    for (let i = 0; i < projectNames.length; i++) {
+      projects.push({
+        project_name: projectNames[i],
+        github_link: githubLinks[i]
+      });
+    }
+    return projects;
+  }
+
   try {
     // Check and log form data
     console.log('degree:', degree);
@@ -1374,8 +1385,10 @@ router.post('/edit_resume/:id', async (req, res) => {
     console.log('experience_start_date:', experience_start_date);
     console.log('experience_end_date:', experience_end_date);
     console.log('description:', description);
+    console.log('project_name:', project_name);
+    console.log('github_link:', github_link);
 
-    if (!Array.isArray(degree) || !Array.isArray(institution) || !Array.isArray(education_start_date) || !Array.isArray(education_end_date) || !Array.isArray(company_name) || !Array.isArray(role) || !Array.isArray(experience_start_date) || !Array.isArray(experience_end_date) || !Array.isArray(description)) {
+    if (!Array.isArray(degree) || !Array.isArray(institution) || !Array.isArray(education_start_date) || !Array.isArray(education_end_date) || !Array.isArray(company_name) || !Array.isArray(role) || !Array.isArray(experience_start_date) || !Array.isArray(experience_end_date) || !Array.isArray(description) || !Array.isArray(project_name) || !Array.isArray(github_link)) {
       throw new Error('Invalid form data');
     }
 
@@ -1398,9 +1411,13 @@ router.post('/edit_resume/:id', async (req, res) => {
         const parsedEducation = parseEducationFromForm(degree, institution, education_start_date, education_end_date);
         const educationString = parsedEducation.map(edu => `${edu.degree}:${edu.institution}:${edu.start_date}:${edu.end_date}`).join(';;');
 
+        // Parse projects using the new function
+        const parsedProjects = parseProjectsFromForm(project_name, github_link);
+        const projectsString = parsedProjects.map(proj => `${proj.project_name}:${proj.github_link}`).join(';;');
+
         // Update resume data in the database
-        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ?, experience = ?, education = ? WHERE id = ?';
-        const resumeValues = [skillsString, linkedUrl, experienceString, educationString, resumeId];
+        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ?, experience = ?, education = ?, projects = ? WHERE id = ?';
+        const resumeValues = [skillsString, linkedUrl, experienceString, educationString, projectsString, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
@@ -1416,11 +1433,10 @@ router.post('/edit_resume/:id', async (req, res) => {
         const query = `
           SELECT resumes.*, 
                 resumes.education,
-                GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
+                resumes.projects,
                 resumes.experience,
                 GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
           FROM resumes
-          LEFT JOIN Projects p ON resumes.user_id = p.user_id
           LEFT JOIN Certificates c ON resumes.user_id = c.user_id
           WHERE resumes.id = ? AND resumes.user_id = ?
           GROUP BY resumes.id
@@ -1533,6 +1549,7 @@ router.post('/edit_resume/:id', async (req, res) => {
                 }
 
                 // Update the resumes table with the S3 URL
+                // Update the resumes table with the S3 URL
                 const updateResumeS3Query = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
                 connection.query(updateResumeS3Query, [data.Location, resumeId], (updateErr) => {
                   if (updateErr) {
@@ -1587,6 +1604,8 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+                
+
 
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
