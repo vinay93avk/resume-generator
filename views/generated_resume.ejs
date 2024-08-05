@@ -72,8 +72,9 @@
         <% if (typeof pdf === 'undefined' || !pdf) { %>
         <a href="<%= downloadUrl %>" class="download-btn">Download PDF</a>
         <div class="actions">
-            <!-- Updated to direct to the edit experience page -->
-            <a href="/edit_experience/<%= resumeId %>" class="btn edit-btn">Edit Experience</a>
+            <form action="/edit_resume/<%= resumeId %>" method="get">
+                <button type="submit" class="btn edit-btn">Edit Resume</button>
+            </form>
             <form action="/delete_resume/<%= resumeId %>" method="post" onsubmit="return confirm('Are you sure you want to delete this resume?');">
                 <button type="submit" class="btn delete-btn">Delete Resume</button>
             </form>
