@@ -119,7 +119,7 @@ router.get('/show_resume', (req, res) => {
   const userId = req.session.user.id;
 
   const query = `
-    SELECT resumes.id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
+    SELECT resumes.user_id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
     FROM resumes
     LEFT JOIN comments ON resumes.id = comments.resume_id
     WHERE resumes.user_id = ?
@@ -133,16 +133,15 @@ router.get('/show_resume', (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.render('show_resume', { pdfUrl: null, comments: [], resumeId: null, user_id: userId });
+      return res.render('show_resume', { pdfUrl: null, comments: [], resumeId: null });
     }
 
     const resumeData = results[0];
     const comments = results.map(row => ({ comment: row.comment, created_at: row.created_at })).filter(row => row.comment);
 
-    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId, user_id: userId });
+    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId });
   });
 });
-
 
 
 router.get('/admin_dashboard', (req, res) => {
@@ -415,10 +414,6 @@ router.post('/generate_resume', async (req, res) => {
   try {
     // Generate experience points for each experience entry
     const experiencePointsArray = await Promise.all(parsedExperience.map(exp => generateExperiencePoints(exp, jobDescription, skills)));
-    // Combine all experience points into a single string to be stored in the database
-    const aiGeneratedDescription = experiencePointsArray
-    .map(points => points.join('; ')) // Join each point with semicolon for a single experience
-    .join(' ;; '); // Separate different experiences with double semicolons
 
     // Add generated experience points to each experience entry
     parsedExperience.forEach((exp, index) => {
@@ -494,8 +489,8 @@ router.post('/generate_resume', async (req, res) => {
     const experienceDescriptionCombined = parsedExperience.map(exp => `${exp.role} at ${exp.company_name} (${exp.start_date} to ${exp.end_date}): ${exp.description}`).join('; ');
 
     // Inserting into resumes table
-    const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl, ai_generated_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const resumeValues = [req.session.user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl, aiGeneratedDescription];
+    const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
     connection.query(insertResumeQuery, resumeValues, (error, results) => {
       if (error) {
         console.error('Error saving resume:', error);
