@@ -1272,31 +1272,28 @@ router.get('/edit_experience/:resumeId', async (req, res) => {
   console.log("Received resumeId:", resumeId);
 
   try {
-      // First, determine the user_id from the resumeId
-      const userQuery = `SELECT user_id FROM resumes WHERE id = ?`;
-      const [userResults] = await connection.promise().query(userQuery, [resumeId]);
-
-      if (userResults.length === 0) {
-          return res.status(404).send('Resume not found.');
-      }
-
-      const userId = userResults[0].user_id;
-
-      // Fetch experiences using the user_id
+      // Adjusted to query using resumeId directly
       const experiencesQuery = `
           SELECT Experience.*, resumes.ai_generated_description
           FROM Experience
           JOIN resumes ON Experience.user_id = resumes.user_id
-          WHERE Experience.user_id = ? AND resumes.ai_generated_description IS NOT NULL AND TRIM(resumes.ai_generated_description) <> ''
+          WHERE resumes.id = ? AND resumes.ai_generated_description IS NOT NULL AND TRIM(resumes.ai_generated_description) <> ''
       `;
-      const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
+      const [experiences] = await connection.promise().query(experiencesQuery, [resumeId]);
+
+      console.log("Fetched experiences:", experiences);
 
       if (experiences.length === 0) {
           return res.status(404).send('No AI-generated experiences found for this resume.');
       }
 
-      const user = { user_id: userId };
-      res.render('edit_experience', { user, experiences });
+      experiences.forEach(exp => {
+          if (exp.ai_generated_description) {
+              exp.ai_description_points = exp.ai_generated_description.split(';').map(point => point.trim() + '.');
+          }
+      });
+
+      res.render('edit_experience', { user: { user_id: experiences[0].user_id }, experiences });
   } catch (error) {
       console.error('Error fetching experiences:', error);
       res.status(500).send('Error fetching experiences');
@@ -1306,36 +1303,37 @@ router.get('/edit_experience/:resumeId', async (req, res) => {
 
 
 
-router.post('/update_experience/:user_id', async (req, res) => {
-  const { user_id } = req.params;
+router.post('/update_experience/:resumeId', async (req, res) => {
+  const { resumeId } = req.params;
 
-  if (!req.isAuthenticated || req.user.user_id !== user_id) {
+  if (!req.isAuthenticated || !req.session.user || req.session.user.user_id !== req.body.userId) {
     return res.status(403).send('Unauthorized access.');
   }
 
   try {
-      const promises = [];
-      Object.keys(req.body).forEach(key => {
-          if (key.startsWith('ai_description_')) {
-              const resumeId = key.split('_')[2]; // Assuming the key format is ai_description_{resumeId}
-              const aiDescription = req.body[key].trim();
+    const promises = [];
+    Object.keys(req.body).forEach(key => {
+        if (key.startsWith('ai_description_')) {
+            const expId = key.split('_')[2];
+            const aiDescription = req.body[key].trim();
 
-              if (aiDescription.length < 10) {
+            if (aiDescription.length < 10) {
                 throw new Error('AI-generated description too short.');
-              }
+            }
 
-              const updateQuery = `UPDATE resumes SET ai_generated_description = ? WHERE id = ? AND user_id = ?`;
-              promises.push(connection.promise().query(updateQuery, [aiDescription, resumeId, user_id]));
-          }
-      });
+            const updateQuery = `UPDATE resumes SET ai_generated_description = ? WHERE id = ?`;
+            promises.push(connection.promise().query(updateQuery, [aiDescription, resumeId])); // Use resumeId directly
+        }
+    });
 
-      await Promise.all(promises);
-      res.redirect('/profile');
+    await Promise.all(promises);
+    res.redirect('/show_resume'); // Assuming this is the correct redirection after the update
   } catch (error) {
       console.error('Error updating AI-generated descriptions:', error);
       res.status(500).send('Failed to update AI-generated descriptions: ' + error.message);
   }
 });
+
 
 
 // Handle resume deletion
