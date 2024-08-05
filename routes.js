@@ -1366,9 +1366,13 @@ router.post('/edit_resume/:id', async (req, res) => {
   function parseProjectsFromForm(projectNames, githubLinks) {
     const projects = [];
     for (let i = 0; i < projectNames.length; i++) {
+      let link = githubLinks[i].trim();
+      if (!link.startsWith('http://') && !link.startsWith('https://')) {
+        link = `https://${link}`;
+      }
       projects.push({
         project_name: projectNames[i],
-        github_link: githubLinks[i].startsWith('http://') || githubLinks[i].startsWith('https://') ? githubLinks[i] : `https://${githubLinks[i]}`
+        github_link: link
       });
     }
     return projects;
