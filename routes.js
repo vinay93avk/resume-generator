@@ -1377,66 +1377,66 @@ router.post('/edit_resume/:id', async (req, res) => {
         });
 
         // Update or insert skills
-        const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
-        for (const skill of parsedSkills) {
-          await new Promise((resolve, reject) => {
-            connection.query(updateSkillsQuery, [user.id, skill.skill_name, skill.proficiency_level], (err) => {
-              if (err) {
-                console.error('Error updating skills:', err);
-                return reject(err);
-              }
-              resolve();
-            });
-          });
-        }
+        // const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
+        // for (const skill of parsedSkills) {
+        //   await new Promise((resolve, reject) => {
+        //     connection.query(updateSkillsQuery, [user.id, skill.skill_name, skill.proficiency_level], (err) => {
+        //       if (err) {
+        //         console.error('Error updating skills:', err);
+        //         return reject(err);
+        //       }
+        //       resolve();
+        //     });
+        //   });
+        // }
 
         // Update or insert experience in Experience table
-      const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
-      for (const exp of parsedExperience) {
-        await new Promise((resolve, reject) => {
-          connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
-            if (err) {
-              console.error('Error updating experience:', err);
-              return reject(err);
-            }
-            resolve();
-          });
-        });
-      }
+      // const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
+      // for (const exp of parsedExperience) {
+      //   await new Promise((resolve, reject) => {
+      //     connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
+      //       if (err) {
+      //         console.error('Error updating experience:', err);
+      //         return reject(err);
+      //       }
+      //       resolve();
+      //     });
+      //   });
+      // }
 
         // Update or insert projects
-        if (projects) {
-          const parsedProjects = parseProjects(projects);
-          const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
-          for (const project of parsedProjects) {
-            await new Promise((resolve, reject) => {
-              connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
-                if (err) {
-                  console.error('Error updating projects:', err);
-                  return reject(err);
-                }
-                resolve();
-              });
-            });
-          }
-        }
+        // if (projects) {
+        //   const parsedProjects = parseProjects(projects);
+        //   const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
+        //   for (const project of parsedProjects) {
+        //     await new Promise((resolve, reject) => {
+        //       connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
+        //         if (err) {
+        //           console.error('Error updating projects:', err);
+        //           return reject(err);
+        //         }
+        //         resolve();
+        //       });
+        //     });
+        //   }
+        // }
 
         // Update or insert certificates
-        if (certificates) {
-          const parsedCertificates = parseCertificates(certificates);
-          const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
-          for (const cert of parsedCertificates) {
-            await new Promise((resolve, reject) => {
-              connection.query(updateCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date], (err) => {
-                if (err) {
-                  console.error('Error updating certificates:', err);
-                  return reject(err);
-                }
-                resolve();
-              });
-            });
-          }
-        }
+        // if (certificates) {
+        //   const parsedCertificates = parseCertificates(certificates);
+        //   const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
+        //   for (const cert of parsedCertificates) {
+        //     await new Promise((resolve, reject) => {
+        //       connection.query(updateCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date], (err) => {
+        //         if (err) {
+        //           console.error('Error updating certificates:', err);
+        //           return reject(err);
+        //         }
+        //         resolve();
+        //       });
+        //     });
+        //   }
+        // }
 
         // Fetch updated resume data
         const query = `
