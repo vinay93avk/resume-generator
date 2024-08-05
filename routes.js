@@ -1358,9 +1358,13 @@ router.post('/edit_resume/:id', async (req, res) => {
         const parsedSkills = parseSkills(skills || '');
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
+        // Parse experience
+        const parsedExperience = parseExperience(experience);
+        const experienceString = parsedExperience.map(exp => `${exp.company_name}:${exp.role}:${exp.start_date}:${exp.end_date}:${exp.description}`).join(';;');
+
         // Update resume data in the database
-        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
-        const resumeValues = [skillsString, linkedUrl, resumeId];
+        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ?, experience = ? WHERE id = ?';
+        const resumeValues = [skillsString, linkedUrl, experienceString, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
@@ -1386,13 +1390,11 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         }
 
-        // Update or insert experience
-
-      const parsedExperience = parseExperience(experience);
-      const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        // Update or insert experience in Experience table
+      const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
       for (const exp of parsedExperience) {
         await new Promise((resolve, reject) => {
-          connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, exp.email], (err) => {
+          connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
             if (err) {
               console.error('Error updating experience:', err);
               return reject(err);
@@ -1545,6 +1547,7 @@ router.post('/edit_resume/:id', async (req, res) => {
                   return res.status(500).send('Error uploading PDF to S3');
                 }
 
+// Update the resumes table with the S3 URL
                 // Update the resumes table with the S3 URL
                 const updateResumeS3Query = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
                 connection.query(updateResumeS3Query, [data.Location, resumeId], (updateErr) => {
@@ -1600,6 +1603,8 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+
+
 
 
 
