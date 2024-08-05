@@ -133,15 +133,16 @@ router.get('/show_resume', (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.render('show_resume', { pdfUrl: null, comments: [], resumeId: null });
+      return res.render('show_resume', { pdfUrl: null, comments: [], resumeId: null, user_id: userId });
     }
 
     const resumeData = results[0];
     const comments = results.map(row => ({ comment: row.comment, created_at: row.created_at })).filter(row => row.comment);
 
-    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId });
+    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId, user_id: userId });
   });
 });
+
 
 
 router.get('/admin_dashboard', (req, res) => {
