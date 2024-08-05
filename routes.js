@@ -1336,6 +1336,20 @@ router.post('/edit_resume/:id', async (req, res) => {
   const { firstName, lastName, email, phone } = user;
   const { skills, linkedUrl, education, companyNames, roles, startDates, endDates, descriptions, certificates, projects } = req.body;
 
+  function parseExperienceFromForm(companyNames, roles, startDates, endDates, descriptions) {
+    const experience = [];
+    for (let i = 0; i < companyNames.length; i++) {
+      experience.push({
+        company_name: companyNames[i],
+        role: roles[i],
+        start_date: startDates[i],
+        end_date: endDates[i],
+        description: descriptions[i]
+      });
+    }
+    return experience;
+  }
+
   try {
     connection.beginTransaction(async (err) => {
       if (err) {
@@ -1348,8 +1362,8 @@ router.post('/edit_resume/:id', async (req, res) => {
         const parsedSkills = parseSkills(skills || '');
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
-        // Parse experience using the existing function
-        const parsedExperience = parseExperience(companyNames, roles, startDates, endDates, descriptions);
+        // Parse experience using the new function
+        const parsedExperience = parseExperienceFromForm(companyNames, roles, startDates, endDates, descriptions);
         const experienceString = parsedExperience.map(exp => `${exp.company_name}:${exp.role}:${exp.start_date}:${exp.end_date}:${exp.description}`).join(';;');
 
         // Update resume data in the database
@@ -1544,6 +1558,8 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+                     
+
 
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
