@@ -1334,7 +1334,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl, education, companyNames, roles, startDates, endDates, descriptions, certificates, projects } = req.body;
+  const { skills, linkedUrl, education, company_name, role, experience_start_date, experience_end_date, description, certificates, projects } = req.body;
 
   function parseExperienceFromForm(companyNames, roles, startDates, endDates, descriptions) {
     const experience = [];
@@ -1352,13 +1352,13 @@ router.post('/edit_resume/:id', async (req, res) => {
 
   try {
     // Check and log form data
-    console.log('companyNames:', companyNames);
-    console.log('roles:', roles);
-    console.log('startDates:', startDates);
-    console.log('endDates:', endDates);
-    console.log('descriptions:', descriptions);
+    console.log('company_name:', company_name);
+    console.log('role:', role);
+    console.log('experience_start_date:', experience_start_date);
+    console.log('experience_end_date:', experience_end_date);
+    console.log('description:', description);
 
-    if (!Array.isArray(companyNames) || !Array.isArray(roles) || !Array.isArray(startDates) || !Array.isArray(endDates) || !Array.isArray(descriptions)) {
+    if (!Array.isArray(company_name) || !Array.isArray(role) || !Array.isArray(experience_start_date) || !Array.isArray(experience_end_date) || !Array.isArray(description)) {
       throw new Error('Invalid experience data');
     }
 
@@ -1374,7 +1374,7 @@ router.post('/edit_resume/:id', async (req, res) => {
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
         // Parse experience using the new function
-        const parsedExperience = parseExperienceFromForm(companyNames, roles, startDates, endDates, descriptions);
+        const parsedExperience = parseExperienceFromForm(company_name, role, experience_start_date, experience_end_date, description);
         const experienceString = parsedExperience.map(exp => `${exp.company_name}:${exp.role}:${exp.start_date}:${exp.end_date}:${exp.description}`).join(';;');
 
         // Update resume data in the database
