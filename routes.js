@@ -119,7 +119,7 @@ router.get('/show_resume', (req, res) => {
   const userId = req.session.user.id;
 
   const query = `
-    SELECT resumes.user_id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
+    SELECT resumes.id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
     FROM resumes
     LEFT JOIN comments ON resumes.id = comments.resume_id
     WHERE resumes.user_id = ?
