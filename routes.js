@@ -1334,7 +1334,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl, education, company_name, role, experience_start_date, experience_end_date, description, certificates, projects } = req.body;
+  const { skills, linkedUrl, degree, institution, education_start_date, education_end_date, company_name, role, experience_start_date, experience_end_date, description, certificates, projects } = req.body;
 
   function parseExperienceFromForm(companyNames, roles, startDates, endDates, descriptions) {
     const experience = [];
@@ -1350,16 +1350,33 @@ router.post('/edit_resume/:id', async (req, res) => {
     return experience;
   }
 
+  function parseEducationFromForm(degrees, institutions, startDates, endDates) {
+    const education = [];
+    for (let i = 0; i < degrees.length; i++) {
+      education.push({
+        degree: degrees[i],
+        institution: institutions[i],
+        start_date: startDates[i],
+        end_date: endDates[i]
+      });
+    }
+    return education;
+  }
+
   try {
     // Check and log form data
+    console.log('degree:', degree);
+    console.log('institution:', institution);
+    console.log('education_start_date:', education_start_date);
+    console.log('education_end_date:', education_end_date);
     console.log('company_name:', company_name);
     console.log('role:', role);
     console.log('experience_start_date:', experience_start_date);
     console.log('experience_end_date:', experience_end_date);
     console.log('description:', description);
 
-    if (!Array.isArray(company_name) || !Array.isArray(role) || !Array.isArray(experience_start_date) || !Array.isArray(experience_end_date) || !Array.isArray(description)) {
-      throw new Error('Invalid experience data');
+    if (!Array.isArray(degree) || !Array.isArray(institution) || !Array.isArray(education_start_date) || !Array.isArray(education_end_date) || !Array.isArray(company_name) || !Array.isArray(role) || !Array.isArray(experience_start_date) || !Array.isArray(experience_end_date) || !Array.isArray(description)) {
+      throw new Error('Invalid form data');
     }
 
     connection.beginTransaction(async (err) => {
@@ -1377,9 +1394,13 @@ router.post('/edit_resume/:id', async (req, res) => {
         const parsedExperience = parseExperienceFromForm(company_name, role, experience_start_date, experience_end_date, description);
         const experienceString = parsedExperience.map(exp => `${exp.company_name}:${exp.role}:${exp.start_date}:${exp.end_date}:${exp.description}`).join(';;');
 
+        // Parse education using the new function
+        const parsedEducation = parseEducationFromForm(degree, institution, education_start_date, education_end_date);
+        const educationString = parsedEducation.map(edu => `${edu.degree}:${edu.institution}:${edu.start_date}:${edu.end_date}`).join(';;');
+
         // Update resume data in the database
-        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ?, experience = ? WHERE id = ?';
-        const resumeValues = [skillsString, linkedUrl, experienceString, resumeId];
+        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ?, experience = ?, education = ? WHERE id = ?';
+        const resumeValues = [skillsString, linkedUrl, experienceString, educationString, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
@@ -1394,12 +1415,11 @@ router.post('/edit_resume/:id', async (req, res) => {
         // Fetch updated resume data
         const query = `
           SELECT resumes.*, 
-                GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
+                resumes.education,
                 GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
                 resumes.experience,
                 GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
           FROM resumes
-          LEFT JOIN Education e ON resumes.user_id = e.user_id
           LEFT JOIN Projects p ON resumes.user_id = p.user_id
           LEFT JOIN Certificates c ON resumes.user_id = c.user_id
           WHERE resumes.id = ? AND resumes.user_id = ?
