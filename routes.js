@@ -1334,7 +1334,7 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   const { firstName, lastName, email, phone } = user;
-  const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
+  const { skills, linkedUrl, education, companyNames, roles, startDates, endDates, descriptions, certificates, projects } = req.body;
 
   try {
     connection.beginTransaction(async (err) => {
@@ -1348,9 +1348,13 @@ router.post('/edit_resume/:id', async (req, res) => {
         const parsedSkills = parseSkills(skills || '');
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
+        // Parse experience using the existing function
+        const parsedExperience = parseExperience(companyNames, roles, startDates, endDates, descriptions);
+        const experienceString = parsedExperience.map(exp => `${exp.company_name}:${exp.role}:${exp.start_date}:${exp.end_date}:${exp.description}`).join(';;');
+
         // Update resume data in the database
-        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
-        const resumeValues = [skillsString, linkedUrl, resumeId];
+        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ?, experience = ? WHERE id = ?';
+        const resumeValues = [skillsString, linkedUrl, experienceString, resumeId];
 
         await new Promise((resolve, reject) => {
           connection.query(updateResumeQuery, resumeValues, (err) => {
@@ -1362,70 +1366,19 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Update or insert skills
-      //   const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
-      //   for (const skill of parsedSkills) {
-      //     await new Promise((resolve, reject) => {
-      //       connection.query(updateSkillsQuery, [user.id, skill.skill_name, skill.proficiency_level], (err) => {
-      //         if (err) {
-      //           console.error('Error updating skills:', err);
-      //           return reject(err);
-      //         }
-      //         resolve();
-      //       });
-      //     });
-      //   }
-
-      //   // Update or insert experience
-        
-      //     const parsedExperience = parseExperience(experience);
-      //     const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
-      //     for (const exp of parsedExperience) {
-      //       await new Promise((resolve, reject) => {
-      //         connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, exp.email], (err) => {
-      //           if (err) {
-      //             console.error('Error updating experience:', err);
-      //             return reject(err);
-      //           }
-      //           resolve();
-      //         });
-      //       });
-      //     }
-        
-
-      //   // Update or insert projects
-      //   if (projects) {
-      //     const parsedProjects = parseProjects(projects);
-      //     const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
-      //     for (const project of parsedProjects) {
-      //       await new Promise((resolve, reject) => {
-      //         connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
-      //           if (err) {
-      //             console.error('Error updating projects:', err);
-      //             return reject(err);
-      //           }
-      //           resolve();
-      //         });
-      //       });
-      //     }
-      //   }
-
-      //   // Update or insert certificates
-      // if (certificates) {
-      //   const parsedCertificates = parseCertificates(certificates);
-      //   const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
-      //   for (const cert of parsedCertificates) {
-      //     await new Promise((resolve, reject) => {
-      //       connection.query(updateCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date], (err) => {
-      //         if (err) {
-      //           console.error('Error updating certificates:', err);
-      //           return reject(err);
-      //         }
-      //         resolve();
-      //       });
-      //     });
-      //   }
-      //   }
+        // Updating experience in the Experience table
+        for (const exp of parsedExperience) {
+          const updateExperienceQuery = 'UPDATE Experience SET company_name = ?, role = ?, start_date = ?, end_date = ?, description = ? WHERE user_id = ? AND id = ?';
+          await new Promise((resolve, reject) => {
+            connection.query(updateExperienceQuery, [exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, user.id, exp.id], (err) => {
+              if (err) {
+                console.error('Error updating experience:', err);
+                return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
 
         // Fetch updated resume data
         const query = `
@@ -1591,11 +1544,6 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
-
-
-
-
-
 
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
