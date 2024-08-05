@@ -1370,9 +1370,6 @@ router.post('/update_experience/:resumeId', async (req, res) => {
 });
 
 
-
-
-
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
   const resumeId = req.params.id;
