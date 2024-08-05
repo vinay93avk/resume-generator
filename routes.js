@@ -1351,6 +1351,17 @@ router.post('/edit_resume/:id', async (req, res) => {
   }
 
   try {
+    // Check and log form data
+    console.log('companyNames:', companyNames);
+    console.log('roles:', roles);
+    console.log('startDates:', startDates);
+    console.log('endDates:', endDates);
+    console.log('descriptions:', descriptions);
+
+    if (!Array.isArray(companyNames) || !Array.isArray(roles) || !Array.isArray(startDates) || !Array.isArray(endDates) || !Array.isArray(descriptions)) {
+      throw new Error('Invalid experience data');
+    }
+
     connection.beginTransaction(async (err) => {
       if (err) {
         console.error('Error starting transaction:', err);
