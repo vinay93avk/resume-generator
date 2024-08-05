@@ -1267,32 +1267,42 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
 // Show edit resume form
-router.get('/edit_experience/:user_id', async (req, res) => {
-  const { user_id } = req.params;
-  console.log("Received user_id:", user_id);
+router.get('/edit_experience/:resumeId', async (req, res) => {
+  const { resumeId } = req.params;
+  console.log("Received resumeId:", resumeId);
 
   try {
+      // First, determine the user_id from the resumeId
+      const userQuery = `SELECT user_id FROM resumes WHERE id = ?`;
+      const [userResults] = await connection.promise().query(userQuery, [resumeId]);
+
+      if (userResults.length === 0) {
+          return res.status(404).send('Resume not found.');
+      }
+
+      const userId = userResults[0].user_id;
+
+      // Fetch experiences using the user_id
       const experiencesQuery = `
           SELECT Experience.*, resumes.ai_generated_description
           FROM Experience
           JOIN resumes ON Experience.user_id = resumes.user_id
-          WHERE resumes.user_id = ? AND resumes.ai_generated_description IS NOT NULL AND TRIM(resumes.ai_generated_description) <> ''
+          WHERE Experience.user_id = ? AND resumes.ai_generated_description IS NOT NULL AND TRIM(resumes.ai_generated_description) <> ''
       `;
-      const [experiences] = await connection.promise().query(experiencesQuery, [user_id]);
-
-      console.log("Fetched experiences:", experiences);
+      const [experiences] = await connection.promise().query(experiencesQuery, [userId]);
 
       if (experiences.length === 0) {
-          return res.status(404).send('No AI-generated experiences found for user ID: ' + user_id);
+          return res.status(404).send('No AI-generated experiences found for this resume.');
       }
 
-      const user = { user_id: user_id };
+      const user = { user_id: userId };
       res.render('edit_experience', { user, experiences });
   } catch (error) {
       console.error('Error fetching experiences:', error);
       res.status(500).send('Error fetching experiences');
   }
 });
+
 
 
 
