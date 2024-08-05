@@ -1263,34 +1263,40 @@ router.get('/user/:email/certificates', (req, res) => {
   });
 
 // Show edit resume form
-router.get('/edit_experience/:user_id', async (req, res) => {
-  const { user_id } = req.params;
-  console.log("Received user_id:", user_id);  // Debug log to check the received userId
-
-  try {
-      // Join Experience and resumes tables to ensure correct user_id is used
-      const experiencesQuery = `
-          SELECT Experience.*
-          FROM Experience
-          JOIN resumes ON Experience.user_id = resumes.user_id
-          WHERE resumes.user_id = ? AND Experience.description IS NOT NULL AND TRIM(Experience.description) <> ''
-      `;
-      const [experiences] = await connection.promise().query(experiencesQuery, [user_id]);
-
-      console.log("Fetched experiences:", experiences); // Log fetched data for debugging
-
-      if (experiences.length === 0) {
-          return res.status(404).send('No experiences found for user ID: ' + user_id);
-      }
-
-      // Utilize user details in rendering if necessary
-      const user = { user_id: user_id }; // Using user_id to maintain consistency
-      res.render('edit_experience', { user, experiences });
-  } catch (error) {
-      console.error('Error fetching experiences:', error);
-      res.status(500).send('Error fetching experiences');
+router.get('/show_resume', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
+
+  const userId = req.session.user.id;
+
+  console.log("Fetching resume for user ID:", userId);
+
+  const query = `
+    SELECT resumes.id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
+    FROM resumes
+    LEFT JOIN comments ON resumes.id = comments.resume_id
+    WHERE resumes.user_id = ?
+    ORDER BY resumes.created_at DESC, comments.created_at ASC
+    LIMIT 1
+  `;
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error('Error fetching resume and comments:', error);
+      return res.status(500).send('Error fetching resume and comments');
+    }
+
+    if (results.length === 0) {
+      return res.render('show_resume', { pdfUrl: null, comments: [], resumeId: null });
+    }
+
+    const resumeData = results[0];
+    const comments = results.map(row => ({ comment: row.comment, created_at: row.created_at })).filter(row => row.comment);
+
+    res.render('show_resume', { pdfUrl: resumeData.s3_url, comments, resumeId: resumeData.resumeId });
+  });
 });
+
 
 
 router.post('/update_experience/:user_id', async (req, res) => {
