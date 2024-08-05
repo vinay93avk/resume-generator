@@ -1455,6 +1455,19 @@ router.post('/edit_resume/:id', async (req, res) => {
             return { certificate_name, issuing_organization, issue_date, expiration_date };
           }) : [];
 
+          console.log({
+            firstName,
+            lastName,
+            email,
+            phone,
+            linkedUrl,
+            skills: parsedSkills,
+            education: resume.education,
+            experience: resume.experience,
+            certificates: resume.certificates,
+            projects: resume.projects
+          });
+
           // Render the resume to HTML for the web view
           ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
             firstName,
@@ -1569,8 +1582,6 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
-                     
-
 
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
