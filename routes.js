@@ -1368,7 +1368,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     for (let i = 0; i < projectNames.length; i++) {
       projects.push({
         project_name: projectNames[i],
-        github_link: githubLinks[i]
+        github_link: githubLinks[i].startsWith('http://') || githubLinks[i].startsWith('https://') ? githubLinks[i] : `https://${githubLinks[i]}`
       });
     }
     return projects;
@@ -1460,9 +1460,6 @@ router.post('/edit_resume/:id', async (req, res) => {
 
           resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
             let [project_name, github_link] = proj.split(':');
-            if (github_link && !github_link.startsWith('http://') && !github_link.startsWith('https://')) {
-              github_link = 'https://' + github_link; // Default to https
-            }
             return { project_name, github_link };
           }) : [];
 
@@ -1535,6 +1532,7 @@ router.post('/edit_resume/:id', async (req, res) => {
               await browser.close();
 
               // Upload PDF to S3
+              // Upload PDF to S3
               const s3Params = {
                 Bucket: 'resume-generator-ocu',
                 Key: `resumes/${user.id}-${Date.now()}.pdf`,
@@ -1548,7 +1546,6 @@ router.post('/edit_resume/:id', async (req, res) => {
                   return res.status(500).send('Error uploading PDF to S3');
                 }
 
-                // Update the resumes table with the S3 URL
                 // Update the resumes table with the S3 URL
                 const updateResumeS3Query = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
                 connection.query(updateResumeS3Query, [data.Location, resumeId], (updateErr) => {
@@ -1604,6 +1601,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
+              
                 
 
 
