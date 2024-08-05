@@ -1336,18 +1336,17 @@ router.post('/edit_resume/:id', async (req, res) => {
   const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
 
   try {
-    connection.beginTransaction(async (err) => {
+    await connection.beginTransaction(async (err) => {
       if (err) {
         console.error('Error starting transaction:', err);
         return res.status(500).send('Error starting transaction');
       }
 
       try {
-        // Parse skills
+        // Parse and update skills
         const parsedSkills = parseSkills(skills || '');
         const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
 
-        // Update resume data in the database
         const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
         const resumeValues = [skillsString, linkedUrl, resumeId];
 
@@ -1361,7 +1360,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         });
 
-        // Update or insert skills
+        // Update skills
         const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
         for (const skill of parsedSkills) {
           await new Promise((resolve, reject) => {
@@ -1375,7 +1374,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           });
         }
 
-        // Update or insert experience
+        // Update experience
         if (experience) {
           const parsedExperience = parseExperience(experience);
           const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
@@ -1392,7 +1391,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           }
         }
 
-        // Update or insert projects
+        // Update projects
         if (projects) {
           const parsedProjects = parseProjects(projects);
           const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
@@ -1409,7 +1408,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           }
         }
 
-        // Update or insert certificates
+        // Update certificates
       if (certificates) {
         const parsedCertificates = parseCertificates(certificates);
         const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
@@ -1426,7 +1425,7 @@ router.post('/edit_resume/:id', async (req, res) => {
         }
         }
 
-        // Fetch updated resume data
+        // Fetch updated resume data and render it
         const query = `
           SELECT resumes.*, 
                 GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
@@ -1589,24 +1588,55 @@ router.post('/edit_resume/:id', async (req, res) => {
     console.error('Error updating resume:', error);
     res.status(500).send('Error updating resume');
   }
-  });
+});
 
 
 // Handle resume deletion
 router.post('/delete_resume/:id', (req, res) => {
   const resumeId = req.params.id;
+  const userId = req.session.user.id;
 
   const query = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
-  connection.query(query, [resumeId, req.session.user.id], (error) => {
+  connection.query(query, [resumeId, userId], (error) => {
     if (error) {
       console.error('Error deleting resume:', error);
       return res.status(500).send('Error deleting resume');
     }
 
-    // Render a confirmation page after deletion
-    res.render('resume_deleted'); // You can change this view name as needed
+    // Optionally, delete the associated resume file from S3
+    const getS3UrlQuery = 'SELECT s3_url FROM resumes WHERE id = ? AND user_id = ?';
+    connection.query(getS3UrlQuery, [resumeId, userId], (error, results) => {
+      if (error) {
+        console.error('Error fetching S3 URL:', error);
+        return res.status(500).send('Error fetching S3 URL');
+      }
+
+      if (results.length > 0) {
+        const s3Url = results[0].s3_url;
+        const s3Key = s3Url.split('/').slice(-1)[0];
+
+        const deleteParams = {
+          Bucket: 'resume-generator-ocu',
+          Key: s3Key
+        };
+
+        s3.deleteObject(deleteParams, (s3Err) => {
+          if (s3Err) {
+            console.error('Error deleting S3 object:', s3Err);
+            return res.status(500).send('Error deleting S3 object');
+          }
+
+          // Render a confirmation page after deletion
+          res.render('resume_deleted'); // You can change this view name as needed
+        });
+      } else {
+        // Render a confirmation page after deletion if no S3 URL is found
+        res.render('resume_deleted'); // You can change this view name as needed
+      }
+    });
   });
 });
+
 
 
   
