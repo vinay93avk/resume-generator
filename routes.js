@@ -1459,7 +1459,7 @@ router.post('/edit_resume/:id', async (req, res) => {
           }) : [];
 
           resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
-            let [project_name, github_link] = proj.split(':');
+            const [project_name, github_link] = proj.split(':');
             return { project_name, github_link };
           }) : [];
 
@@ -1532,7 +1532,6 @@ router.post('/edit_resume/:id', async (req, res) => {
               await browser.close();
 
               // Upload PDF to S3
-              // Upload PDF to S3
               const s3Params = {
                 Bucket: 'resume-generator-ocu',
                 Key: `resumes/${user.id}-${Date.now()}.pdf`,
@@ -1601,7 +1600,7 @@ router.post('/edit_resume/:id', async (req, res) => {
     res.status(500).send('Error updating resume');
   }
 });
-              
+
                 
 
 
