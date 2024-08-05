@@ -76,12 +76,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Invalid email or password');
     }
 
-    req.session.user_id = user.user_id; // Save the user information in the session using user_id
+    req.session.user = user; // Save the user information in the session
 
     // Insert login time into Sessions table
     const loginTime = new Date();
     const insertSessionQuery = 'INSERT INTO Sessions (user_id, email, login_time) VALUES (?, ?, ?)';
-    connection.query(insertSessionQuery, [user.user_id, email, loginTime], (sessionError) => {
+    connection.query(insertSessionQuery, [user.id, email, loginTime], (sessionError) => {
       if (sessionError) {
         console.error('Error inserting session:', sessionError);
         return res.status(500).send('Error inserting session');
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
       } else {
         // Check if resume exists
         const checkResumeQuery = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-        connection.query(checkResumeQuery, [user.user_id], (resumeError, resumeResults) => {
+        connection.query(checkResumeQuery, [user.id], (resumeError, resumeResults) => {
           if (resumeError) {
             console.error('Error checking for resume:', resumeError);
             return res.status(500).send('Error checking for resume');
@@ -112,11 +112,11 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/show_resume', (req, res) => {
-  if (!req.session.user_id) {
+  if (!req.session.user) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
 
-  const user_id = req.session.user_id;
+  const userId = req.session.user.id;
 
   const query = `
     SELECT resumes.id AS resumeId, resumes.s3_url, comments.comment, comments.created_at
@@ -126,7 +126,7 @@ router.get('/show_resume', (req, res) => {
     ORDER BY resumes.created_at DESC, comments.created_at ASC
     LIMIT 1
   `;
-  connection.query(query, [user_id], (error, results) => {
+  connection.query(query, [userId], (error, results) => {
     if (error) {
       console.error('Error fetching resume and comments:', error);
       return res.status(500).send('Error fetching resume and comments');
@@ -145,8 +145,8 @@ router.get('/show_resume', (req, res) => {
 
 
 router.get('/admin_dashboard', (req, res) => {
-  if (!req.session.user_id || !req.session.user_id.is_admin) {
-    return res.status (403).send('Access denied');
+  if (!req.session.user || !req.session.user.is_admin) {
+    return res.status(403).send('Access denied');
   }
 
   const query = `
@@ -159,7 +159,7 @@ router.get('/admin_dashboard', (req, res) => {
   connection.query(query, (error, results) => {
     if (error) {
       console.error('Error fetching all resumes:', error);
-      return res.status (500).send('Error fetching all resumes');
+      return res.status(500).send('Error fetching all resumes');
     }
 
     const resumes = results.reduce((acc, row) => {
@@ -183,14 +183,13 @@ router.get('/admin_dashboard', (req, res) => {
 });
 
 
-
 router.post('/add_comment', (req, res) => {
-  if (!req.session.user_id || !req.session.user_id.is_admin) {
+  if (!req.session.user || !req.session.user.is_admin) {
     return res.status(403).send('Access denied');
   }
 
   const { resume_id, comment } = req.body;
-  const admin_id = req.session.user_id;
+  const admin_id = req.session.user.id;
 
   const query = 'INSERT INTO comments (resume_id, admin_id, comment) VALUES (?, ?, ?)';
   connection.query(query, [resume_id, admin_id, comment], (error, results) => {
@@ -205,7 +204,7 @@ router.post('/add_comment', (req, res) => {
 
 // Route to display the edit form
 router.get('/edit_comment/:id', (req, res) => {
-  if (!req.session.user_id || !req.session.user_id.is_admin) {
+  if (!req.session.user || !req.session.user.is_admin) {
       return res.status(403).send('Access denied');
   }
 
@@ -227,7 +226,7 @@ router.get('/edit_comment/:id', (req, res) => {
 
 // Route to handle the submission of edited comments
 router.post('/edit_comment/:id', (req, res) => {
-  if (!req.session.user_id || !req.session.user_id.is_admin) {
+  if (!req.session.user || !req.session.user.is_admin) {
       return res.status(403).send('Access denied');
   }
 
@@ -248,7 +247,7 @@ router.post('/edit_comment/:id', (req, res) => {
 
 // Route to delete a comment
 router.post('/delete_comment/:id', (req, res) => {
-  if (!req.session.user_id || !req.session.user_id.is_admin) {
+  if (!req.session.user || !req.session.user.is_admin) {
     return res.status(403).send('Access denied');
   }
 
@@ -269,13 +268,13 @@ router.post('/delete_comment/:id', (req, res) => {
 
 
 router.get('/logout', (req, res) => {
-  if (req.session.user_id) {
-    const user = req.session.user_id;
+  if (req.session.user) {
+    const user = req.session.user;
     const logoutTime = new Date();
-    console.log(`Updating logout time for user: ${user.user_id}, email: ${user.email}, logoutTime: ${logoutTime}`);
+    console.log(`Updating logout time for user: ${user.id}, email: ${user.email}, logoutTime: ${logoutTime}`);
 
     const updateLogoutQuery = 'UPDATE Sessions SET logout_time = ? WHERE user_id = ? AND email = ? AND logout_time IS NULL';
-    connection.query(updateLogoutQuery, [logoutTime, user.user_id, user.email], (error, results) => {
+    connection.query(updateLogoutQuery, [logoutTime, user.id, user.email], (error, results) => {
       if (error) {
         console.error('Error updating session:', error);
         return res.status(500).send('Error updating session');
@@ -295,10 +294,10 @@ router.get('/logout', (req, res) => {
 });
 
 router.get('/resume', (req, res) => {
-  if (!req.session.user_id) {
+  if (!req.session.user) {
     return res.redirect('/login'); // Redirect to login if the user is not logged in
   }
-  res.render('resume', { user: req.session.user_id });
+  res.render('resume', { user: req.session.user });
 });
 
 // Function to handle splitting skills
@@ -311,12 +310,6 @@ function parseSkills(skills) {
 
 // Function to handle splitting certificates
 function parseCertificates(certificateNames, issuingOrganizations, issueDates, expirationDates) {
-  if (!Array.isArray(certificateNames) || !Array.isArray(issuingOrganizations) || 
-      !Array.isArray(issueDates) || !Array.isArray(expirationDates)) {
-    console.error("parseCertificates: One or more parameters are undefined or not arrays");
-    return []; // Return an empty array or handle as appropriate
-  }
-
   const certificates = [];
   for (let i = 0; i < certificateNames.length; i++) {
     certificates.push({
@@ -329,15 +322,8 @@ function parseCertificates(certificateNames, issuingOrganizations, issueDates, e
   return certificates;
 }
 
-
 // Function to handle splitting education
 function parseEducation(degrees, institutions, startDates, endDates) {
-  if (!Array.isArray(degrees) || !Array.isArray(institutions) ||
-      !Array.isArray(startDates) || !Array.isArray(endDates)) {
-    console.error("parseEducation: One or more parameters are undefined or not arrays");
-    return []; // Return an empty array or handle as appropriate
-  }
-
   const education = [];
   for (let i = 0; i < degrees.length; i++) {
     education.push({
@@ -350,15 +336,8 @@ function parseEducation(degrees, institutions, startDates, endDates) {
   return education;
 }
 
-
 // Function to handle splitting experience
 function parseExperience(companyNames, roles, startDates, endDates, descriptions) {
-  // Check if any of the parameters are undefined or not arrays
-  if (!Array.isArray(companyNames) || !Array.isArray(roles) || !Array.isArray(startDates) || !Array.isArray(endDates) || !Array.isArray(descriptions)) {
-    console.error("parseExperience: One or more parameters are undefined or not arrays");
-    return [];  // Return an empty array or handle as appropriate
-  }
-
   const experience = [];
   for (let i = 0; i < companyNames.length; i++) {
     experience.push({
@@ -373,22 +352,15 @@ function parseExperience(companyNames, roles, startDates, endDates, descriptions
 }
 
 function parseProjects(projectNames, githubLinks) {
-  // Ensure both parameters are arrays before proceeding
-  if (!Array.isArray(projectNames) || !Array.isArray(githubLinks)) {
-    console.error("parseProjects: One or more parameters are undefined or not arrays");
-    return []; // Return an empty array or handle as appropriate
-  }
-
   const projects = [];
   for (let i = 0; i < projectNames.length; i++) {
     projects.push({
       project_name: projectNames[i],
-      github_link: githubLinks[i] || '' // Provide a default empty string if undefined
+      github_link: githubLinks[i]
     });
   }
   return projects;
 }
-
 
 
 // Function to generate experience points for each experience
@@ -424,13 +396,13 @@ router.post('/generate_resume', async (req, res) => {
     experience_end_date, description, skills, linkedUrl, jobDescription,
     certificate_name, issuing_organization, issue_date, expiration_date, project_name, github_link
   } = req.body;
-  const { firstName, lastName, email, phone } = req.session.user_id;
+  const { firstName, lastName, email, phone } = req.session.user;
 
   if (!firstName || !lastName || !email || !phone || !degree || !institution || !startDate || !endDate || !company_name || !role || !experience_start_date || !experience_end_date || !skills || !jobDescription) {
     return res.status(400).send('All fields are required');
   }
 
-  const user = req.session.user_id;
+  const user = req.session.user;
 
   // Parsing Education, Experience, Skills, Certificates, and Projects
   const parsedEducation = parseEducation(degree, institution, startDate, endDate);
@@ -453,7 +425,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Education
     const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES ?';
-    const educationValues = parsedEducation.map(edu => [user.user_id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
+    const educationValues = parsedEducation.map(edu => [user.id, edu.degree, edu.institution, edu.start_date, edu.end_date, email]);
     connection.query(insertEducationQuery, [educationValues], (error, results) => {
       if (error) {
         console.error('Error saving education:', error);
@@ -464,7 +436,7 @@ router.post('/generate_resume', async (req, res) => {
     // Inserting Experience
     const insertExperienceQuery = 'INSERT INTO Experience (user_id, company_name, role, start_date, end_date, description, full_description, email) VALUES ?';
     const experienceValues = parsedExperience.map(exp => [
-      user.user_id,
+      user.id,
       exp.company_name,
       exp.role,
       exp.start_date,
@@ -484,7 +456,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Skills
     const insertSkillsQuery = 'INSERT INTO Skills (user_id, email, skill_name, proficiency_level) VALUES ?';
-    const skillValues = parsedSkills.map(skill => [user.user_id, email, skill.skill_name, skill.proficiency_level]);
+    const skillValues = parsedSkills.map(skill => [user.id, email, skill.skill_name, skill.proficiency_level]);
     connection.query(insertSkillsQuery, [skillValues], (error, results) => {
       if (error) {
         console.error('Error saving skill:', error);
@@ -494,7 +466,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Certificates
     const insertCertificatesQuery = 'INSERT INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date, email) VALUES ?';
-    const certificateValues = parsedCertificates.map(cert => [user.user_id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
+    const certificateValues = parsedCertificates.map(cert => [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date, email]);
     connection.query(insertCertificatesQuery, [certificateValues], (error, results) => {
       if (error) {
         console.error('Error saving certificate:', error);
@@ -504,7 +476,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting Projects
     const insertProjectsQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES ?';
-    const projectValues = parsedProjects.map(project => [user.user_id, project.project_name, project.github_link]);
+    const projectValues = parsedProjects.map(project => [user.id, project.project_name, project.github_link]);
     connection.query(insertProjectsQuery, [projectValues], (error, results) => {
       if (error) {
         console.error('Error saving projects:', error);
@@ -518,7 +490,7 @@ router.post('/generate_resume', async (req, res) => {
 
     // Inserting into resumes table
     const insertResumeQuery = 'INSERT INTO resumes (user_id, firstName, lastName, email, phone, education, experience, skills, linkedUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    const resumeValues = [user.user_id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
+    const resumeValues = [user.id, firstName, lastName, email, phone, educationDescription, experienceDescriptionCombined, skills, linkedUrl];
     connection.query(insertResumeQuery, resumeValues, (error, results) => {
       if (error) {
         console.error('Error saving resume:', error);
@@ -588,7 +560,7 @@ router.post('/generate_resume', async (req, res) => {
           // Upload PDF to S3
           const s3Params = {
             Bucket: 'resume-generator-ocu',
-            Key: `resumes/${user.user_id}-${Date.now()}.pdf`,
+            Key: `resumes/${user.id}-${Date.now()}.pdf`,
             Body: pdfBuffer,
             ContentType: 'application/pdf'
           };
@@ -641,14 +613,14 @@ router.post('/generate_resume', async (req, res) => {
 });
   
   router.get('/download_resume', async (req, res) => {
-    if (!req.session.user_id) {
+    if (!req.session.user) {
       return res.redirect('/login'); // Redirect to login if the user is not logged in
     }
   
-    const user_id = req.session.user_id;
+    const userId = req.session.user.id;
   
     const query = 'SELECT s3_url FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
-    connection.query(query, [user_id], (error, results) => {
+    connection.query(query, [userId], (error, results) => {
       if (error) {
         console.error('Error fetching resume URL:', error);
         return res.status(500).send('Error fetching resume URL');
@@ -1290,69 +1262,350 @@ router.get('/user/:email/certificates', (req, res) => {
     });
   });
 
-  router.get('/edit_experience/:user_id', async (req, res) => {
-    const { user_id } = req.params;
-    console.log("Received user_id:", user_id);  // Debug log to check the received userId
+// Show edit resume form
+router.get('/edit_resume/:id', (req, res) => {
+  const resumeId = req.params.id;
+  const userId = req.session.user.id;
 
-    try {
-        // Join Experience and resumes tables to ensure correct user_id is used
-        const experiencesQuery = `
-            SELECT Experience.*
-            FROM Experience
-            JOIN resumes ON Experience.user_id = resumes.user_id
-            WHERE resumes.user_id = ? AND Experience.description IS NOT NULL AND TRIM(Experience.description) <> ''
-        `;
-        const [experiences] = await connection.promise().query(experiencesQuery, [user_id]);
+  const query = `
+    SELECT resumes.*, 
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
+          GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates,
+          GROUP_CONCAT(DISTINCT s.skill_name ORDER BY s.skill_name SEPARATOR ', ') AS skills
+    FROM resumes
+    LEFT JOIN Education e ON resumes.user_id = e.user_id
+    LEFT JOIN Projects p ON resumes.user_id = p.user_id
+    LEFT JOIN Experience exp ON resumes.user_id = exp.user_id
+    LEFT JOIN Certificates c ON resumes.user_id = c.user_id
+    LEFT JOIN Skills s ON resumes.user_id = s.user_id
+    WHERE resumes.id = ? AND resumes.user_id = ?
+    GROUP BY resumes.id
+  `;
 
-        console.log("Fetched experiences:", experiences); // Log fetched data for debugging
-
-        if (experiences.length === 0) {
-            return res.status(404).send('No experiences found for user ID: ' + user_id);
-        }
-
-        // Utilize user details in rendering if necessary
-        const user = { user_id: user_id }; // Using user_id to maintain consistency
-        res.render('edit_experience', { user, experiences });
-    } catch (error) {
-        console.error('Error fetching experiences:', error);
-        res.status(500).send('Error fetching experiences');
+  connection.query(query, [resumeId, userId], (error, results) => {
+    if (error) {
+      console.error('Error fetching resume details:', error);
+      return res.status(500).send('Error fetching resume details');
     }
+
+    if (results.length === 0) {
+      return res.status(404).send('Resume not found');
+    }
+
+    const resume = results[0];
+
+    resume.education = resume.education ? resume.education.split(';;').map(edu => {
+      const [degree, institution, start_date, end_date] = edu.split(':');
+      return { degree, institution, start_date, end_date };
+    }) : [];
+
+    resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
+      const [project_name, github_link] = proj.split(':');
+      return { project_name, github_link };
+    }) : [];
+
+    resume.experience = resume.experience ? resume.experience.split(';;').map(exp => {
+      const [company_name, role, start_date, end_date, description] = exp.split(':');
+      return { company_name, role, start_date, end_date, description };
+    }) : [];
+
+    resume.certificates = resume.certificates ? resume.certificates.split(';;').map(cert => {
+      const [certificate_name, issuing_organization, issue_date, expiration_date] = cert.split(':');
+      return { certificate_name, issuing_organization, issue_date, expiration_date };
+    }) : [];
+
+    // Ensuring skills is an array of strings
+    resume.skills = resume.skills ? resume.skills.split(',').map(skill => skill.trim()) : [];
+
+    res.render('edit_resume', { resume });
+  });
 });
 
 
-router.post('/update_experience/:user_id', async (req, res) => {
-  const { user_id } = req.params;
+router.post('/edit_resume/:id', async (req, res) => {
+  const resumeId = req.params.id;
+  const user = req.session.user;
 
-  // Check user authorization (this is pseudocode; implement according to your auth system)
-  if (!req.isAuthenticated || req.user.user_id !== user_id) {
-    return res.status(403).send('Unauthorized access.');
+  if (!user || !user.id) {
+    return res.status(403).send('User not authenticated or session expired');
   }
+
+  const { firstName, lastName, email, phone } = user;
+  const { skills, linkedUrl, education, experience, certificates, projects } = req.body;
 
   try {
-      const promises = [];
-      Object.keys(req.body).forEach(key => {
-          if (key.startsWith('description_')) {
-              const expId = key.split('_')[1];
-              const description = req.body[key].trim(); // Trim and potentially sanitize inputs
+    connection.beginTransaction(async (err) => {
+      if (err) {
+        console.error('Error starting transaction:', err);
+        return res.status(500).send('Error starting transaction');
+      }
 
-              // Simple input validation example
-              if (description.length < 10) { // Assume a valid description must be at least 10 characters long
-                throw new Error('Description too short.');
+      try {
+        // Parse skills
+        const parsedSkills = parseSkills(skills || '');
+        const skillsString = parsedSkills.map(skill => `${skill.skill_name}:${skill.proficiency_level}`).join(', ');
+
+        // Update resume data in the database
+        const updateResumeQuery = 'UPDATE resumes SET skills = ?, linkedUrl = ? WHERE id = ?';
+        const resumeValues = [skillsString, linkedUrl, resumeId];
+
+        await new Promise((resolve, reject) => {
+          connection.query(updateResumeQuery, resumeValues, (err) => {
+            if (err) {
+              console.error('Error updating resume:', err);
+              return reject(err);
+            }
+            resolve();
+          });
+        });
+
+        // Update or insert skills
+        const updateSkillsQuery = 'REPLACE INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
+        for (const skill of parsedSkills) {
+          await new Promise((resolve, reject) => {
+            connection.query(updateSkillsQuery, [user.id, skill.skill_name, skill.proficiency_level], (err) => {
+              if (err) {
+                console.error('Error updating skills:', err);
+                return reject(err);
               }
+              resolve();
+            });
+          });
+        }
 
-              const updateQuery = `UPDATE Experience SET description = ? WHERE id = ? AND user_id = ?`;
-              promises.push(connection.promise().query(updateQuery, [description, expId, user_id]));
+        // Update or insert experience
+        if (experience) {
+          const parsedExperience = parseExperience(experience);
+          const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
+          for (const exp of parsedExperience) {
+            await new Promise((resolve, reject) => {
+              connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
+                if (err) {
+                  console.error('Error updating experience:', err);
+                  return reject(err);
+                }
+                resolve();
+              });
+            });
           }
-      });
+        }
 
-      await Promise.all(promises);
-      res.redirect('/profile'); // Redirect to a profile or review page
+        // Update or insert projects
+        if (projects) {
+          const parsedProjects = parseProjects(projects);
+          const updateProjectsQuery = 'REPLACE INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
+          for (const project of parsedProjects) {
+            await new Promise((resolve, reject) => {
+              connection.query(updateProjectsQuery, [user.id, project.project_name, project.github_link], (err) => {
+                if (err) {
+                  console.error('Error updating projects:', err);
+                  return reject(err);
+                }
+                resolve();
+              });
+            });
+          }
+        }
+
+        // Update or insert certificates
+      if (certificates) {
+        const parsedCertificates = parseCertificates(certificates);
+        const updateCertificatesQuery = 'REPLACE INTO Certificates (user_id, certificate_name, issuing_organization, issue_date, expiration_date) VALUES (?, ?, ?, ?, ?)';
+        for (const cert of parsedCertificates) {
+          await new Promise((resolve, reject) => {
+            connection.query(updateCertificatesQuery, [user.id, cert.certificate_name, cert.issuing_organization, cert.issue_date, cert.expiration_date], (err) => {
+              if (err) {
+                console.error('Error updating certificates:', err);
+                return reject(err);
+              }
+              resolve();
+            });
+          });
+        }
+        }
+
+        // Fetch updated resume data
+        const query = `
+          SELECT resumes.*, 
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', e.degree, e.institution, DATE_FORMAT(e.start_date, '%Y-%m-%d'), DATE_FORMAT(e.end_date, '%Y-%m-%d')) ORDER BY e.start_date SEPARATOR ';;') AS education,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', p.project_name, p.github_link) ORDER BY p.project_name SEPARATOR ';;') AS projects,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', exp.company_name, exp.role, DATE_FORMAT(exp.start_date, '%Y-%m-%d'), DATE_FORMAT(exp.end_date, '%Y-%m-%d'), exp.description) ORDER BY exp.start_date SEPARATOR ';;') AS experience,
+                GROUP_CONCAT(DISTINCT CONCAT_WS(':', c.certificate_name, c.issuing_organization, DATE_FORMAT(c.issue_date, '%Y-%m-%d'), DATE_FORMAT(c.expiration_date, '%Y-%m-%d')) ORDER BY c.issue_date SEPARATOR ';;') AS certificates
+          FROM resumes
+          LEFT JOIN Education e ON resumes.user_id = e.user_id
+          LEFT JOIN Projects p ON resumes.user_id = p.user_id
+          LEFT JOIN Experience exp ON resumes.user_id = exp.user_id
+          LEFT JOIN Certificates c ON resumes.user_id = c.user_id
+          WHERE resumes.id = ? AND resumes.user_id = ?
+          GROUP BY resumes.id
+        `;
+
+        connection.query(query, [resumeId, user.id], async (error, results) => {
+          if (error) {
+            console.error('Error fetching updated resume details:', error);
+            return res.status(500).send('Error fetching updated resume details');
+          }
+
+          if (results.length === 0) {
+            return res.status(404).send('Resume not found');
+          }
+
+          const resume = results[0];
+          resume.education = resume.education ? resume.education.split(';;').map(edu => {
+            const [degree, institution, start_date, end_date] = edu.split(':');
+            return { degree, institution, start_date, end_date };
+          }) : [];
+
+          resume.projects = resume.projects ? resume.projects.split(';;').map(proj => {
+            let [project_name, github_link] = proj.split(':');
+            if (github_link && !github_link.startsWith('http://') && !github_link.startsWith('https://')) {
+              github_link = 'https://' + github_link; // Default to https
+            }
+            return { project_name, github_link };
+          }) : [];
+
+          resume.experience = resume.experience ? resume.experience.split(';;').map(exp => {
+            const [company_name, role, start_date, end_date, description] = exp.split(':');
+            return { company_name, role, start_date, end_date, description };
+          }) : [];
+
+          resume.certificates = resume.certificates ? resume.certificates.split(';;').map(cert => {
+            const [certificate_name, issuing_organization, issue_date, expiration_date] = cert.split(':');
+            return { certificate_name, issuing_organization, issue_date, expiration_date };
+          }) : [];
+
+          // Render the resume to HTML for the web view
+          ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+            firstName,
+            lastName,
+            email,
+            phone,
+            linkedUrl,
+            skills: parsedSkills,
+            education: resume.education,
+            experience: resume.experience,
+            certificates: resume.certificates,
+            projects: resume.projects,
+            pdf: false  // Indicate that this is for web rendering
+          }, async (err, html) => {
+            if (err) {
+              console.error('Error rendering resume HTML:', err);
+              return res.status(500).send('Error rendering resume HTML');
+            }
+
+            try {
+              // Render the resume to HTML for PDF generation
+              const pdfHtml = await ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                firstName,
+                lastName,
+                email,
+                phone,
+                linkedUrl,
+                skills: parsedSkills,
+                education: resume.education,
+                experience: resume.experience,
+                certificates: resume.certificates,
+                projects: resume.projects,
+                pdf: true  // Indicate that this is for PDF generation
+              });
+
+              // Generate PDF from HTML
+              const browser = await puppeteer.launch({
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+              });
+              const page = await browser.newPage();
+              await page.setContent(pdfHtml, { waitUntil: 'networkidle0' });
+
+              const pdfBuffer = await page.pdf({ format: 'A4' });
+              await browser.close();
+
+              // Upload PDF to S3
+              const s3Params = {
+                Bucket: 'resume-generator-ocu',
+                Key: `resumes/${user.id}-${Date.now()}.pdf`,
+                Body: pdfBuffer,
+                ContentType: 'application/pdf'
+              };
+
+              s3.upload(s3Params, (s3Err, data) => {
+                if (s3Err) {
+                  console.error('Error uploading PDF to S3:', s3Err);
+                  return res.status(500).send('Error uploading PDF to S3');
+                }
+
+                // Update the resumes table with the S3 URL
+                const updateResumeS3Query = 'UPDATE resumes SET s3_url = ? WHERE id = ?';
+                connection.query(updateResumeS3Query, [data.Location, resumeId], (updateErr) => {
+                  if (updateErr) {
+                    console.error('Error updating resume with S3 URL:', updateErr);
+                    return res.status(500).send('Error updating resume with S3 URL');
+                  }
+
+                  // Render the final resume view with the download link
+                  ejs.renderFile(path.join(__dirname, 'views', 'update_generated_resume.ejs'), {
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    linkedUrl,
+                    skills: parsedSkills,
+                    education: resume.education,
+                    experience: resume.experience,
+                    certificates: resume.certificates,
+                    projects: resume.projects,
+                    downloadUrl: data.Location, // Set the download URL for the PDF
+                    pdf: false  // For the web view
+                  }, (renderErr, finalHtml) => {
+                    if (renderErr) {
+                      console.error('Error rendering final HTML:', renderErr);
+                      return res.status(500).send('Error rendering final HTML');
+                    }
+
+                    connection.commit((commitErr) => {
+                      if (commitErr) {
+                        console.error('Error committing transaction:', commitErr);
+                        return connection.rollback(() => res.status(500).send('Error committing transaction'));
+                      }
+
+                      res.send(finalHtml); // Send the final HTML response
+                    });
+                  });
+                });
+              });
+            } catch (error) {
+              console.error('Error generating PDF:', error);
+              res.status(500).send('Error generating PDF');
+            }
+          });
+        });
+      } catch (transactionError) {
+        console.error('Transaction error:', transactionError);
+        connection.rollback(() => res.status(500).send('Error processing transaction'));
+      }
+    });
   } catch (error) {
-      console.error('Error updating experiences:', error);
-      res.status(500).send('Failed to update experiences: ' + error.message);
+    console.error('Error updating resume:', error);
+    res.status(500).send('Error updating resume');
   }
-});
+  });
 
+// Handle resume deletion
+router.post('/delete_resume/:id', (req, res) => {
+  const resumeId = req.params.id;
+
+  const query = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
+  connection.query(query, [resumeId, req.session.user.id], (error) => {
+    if (error) {
+      console.error('Error deleting resume:', error);
+      return res.status(500).send('Error deleting resume');
+    }
+
+    // Render a confirmation page after deletion
+    res.render('resume_deleted'); // You can change this view name as needed
+  });
+});
 
 
   
