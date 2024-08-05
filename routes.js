@@ -1306,7 +1306,11 @@ router.get('/edit_experience/:resumeId', async (req, res) => {
 router.post('/update_experience/:resumeId', async (req, res) => {
   const { resumeId } = req.params;
 
-  if (!req.isAuthenticated || !req.session.user || req.session.user.user_id !== req.body.userId) {
+  // Fetch the user ID associated with this resumeId to check authorization
+  const userQuery = `SELECT user_id FROM resumes WHERE id = ?`;
+  const [result] = await connection.promise().query(userQuery, [resumeId]);
+
+  if (result.length === 0 || !req.isAuthenticated || req.session.user.id !== result[0].user_id) {
     return res.status(403).send('Unauthorized access.');
   }
 
@@ -1314,7 +1318,7 @@ router.post('/update_experience/:resumeId', async (req, res) => {
     const promises = [];
     Object.keys(req.body).forEach(key => {
         if (key.startsWith('ai_description_')) {
-            const expId = key.split('_')[2];
+            const expId = key.split('_')[2]; // Assuming this still correctly references the expId
             const aiDescription = req.body[key].trim();
 
             if (aiDescription.length < 10) {
@@ -1322,17 +1326,18 @@ router.post('/update_experience/:resumeId', async (req, res) => {
             }
 
             const updateQuery = `UPDATE resumes SET ai_generated_description = ? WHERE id = ?`;
-            promises.push(connection.promise().query(updateQuery, [aiDescription, resumeId])); // Use resumeId directly
+            promises.push(connection.promise().query(updateQuery, [aiDescription, resumeId]));
         }
     });
 
     await Promise.all(promises);
-    res.redirect('/show_resume'); // Assuming this is the correct redirection after the update
+    res.redirect('/show_resume'); // Adjust the redirection URL as necessary
   } catch (error) {
       console.error('Error updating AI-generated descriptions:', error);
       res.status(500).send('Failed to update AI-generated descriptions: ' + error.message);
   }
 });
+
 
 
 
