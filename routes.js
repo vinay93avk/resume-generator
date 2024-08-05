@@ -1377,12 +1377,12 @@ router.post('/edit_resume/:id', async (req, res) => {
         }
 
         // Update or insert experience
-        if (experience) {
+        
           const parsedExperience = parseExperience(experience);
-          const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description) VALUES (?, ?, ?, ?, ?, ?)';
+          const updateExperienceQuery = 'REPLACE INTO Experience (user_id, company_name, role, start_date, end_date, description, email) VALUES (?, ?, ?, ?, ?, ?, ?)';
           for (const exp of parsedExperience) {
             await new Promise((resolve, reject) => {
-              connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description], (err) => {
+              connection.query(updateExperienceQuery, [user.id, exp.company_name, exp.role, exp.start_date, exp.end_date, exp.description, exp.email], (err) => {
                 if (err) {
                   console.error('Error updating experience:', err);
                   return reject(err);
@@ -1391,7 +1391,7 @@ router.post('/edit_resume/:id', async (req, res) => {
               });
             });
           }
-        }
+        
 
         // Update or insert projects
         if (projects) {
