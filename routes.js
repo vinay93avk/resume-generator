@@ -7,7 +7,7 @@ const AWS = require('aws-sdk');
 const ejs = require('ejs');
 const path = require('path');
 const puppeteer = require('puppeteer');
-const mysql = require('mysql2/promise');
+// const mysql = require('mysql2/promise');
 
 const dbConfig = {
   host: process.env.DB_HOST,
