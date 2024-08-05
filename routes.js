@@ -1306,35 +1306,38 @@ router.get('/edit_experience/:resumeId', async (req, res) => {
 router.post('/update_experience/:resumeId', async (req, res) => {
   const { resumeId } = req.params;
 
-  // Fetch the user ID associated with this resumeId to check authorization
-  const userQuery = `SELECT user_id FROM resumes WHERE id = ?`;
-  const [result] = await connection.promise().query(userQuery, [resumeId]);
+  if (!req.session.user) {
+    return res.status(403).send('Unauthorized access: user not logged in.');
+  }
 
-  if (result.length === 0 || !req.isAuthenticated || req.session.user.id !== result[0].user_id) {
-    return res.status(403).send('Unauthorized access.');
+  const sessionUserId = req.session.user.id;
+  const bodyUserId = req.body.userId;
+
+  if (sessionUserId !== bodyUserId) {
+    return res.status(403).send('Unauthorized access: user ID mismatch.');
   }
 
   try {
     const promises = [];
     Object.keys(req.body).forEach(key => {
-        if (key.startsWith('ai_description_')) {
-            const expId = key.split('_')[2]; // Assuming this still correctly references the expId
-            const aiDescription = req.body[key].trim();
+      if (key.startsWith('ai_description_')) {
+        const expId = key.split('_')[2];
+        const aiDescription = req.body[key].trim();
 
-            if (aiDescription.length < 10) {
-                throw new Error('AI-generated description too short.');
-            }
-
-            const updateQuery = `UPDATE resumes SET ai_generated_description = ? WHERE id = ?`;
-            promises.push(connection.promise().query(updateQuery, [aiDescription, resumeId]));
+        if (aiDescription.length < 10) {
+          throw new Error('AI-generated description too short.');
         }
+
+        const updateQuery = `UPDATE resumes SET ai_generated_description = ? WHERE id = ?`;
+        promises.push(connection.promise().query(updateQuery, [aiDescription, resumeId])); // Use resumeId directly
+      }
     });
 
     await Promise.all(promises);
-    res.redirect('/show_resume'); // Adjust the redirection URL as necessary
+    res.redirect('/show_resume'); // Assuming this is the correct redirection after the update
   } catch (error) {
-      console.error('Error updating AI-generated descriptions:', error);
-      res.status(500).send('Failed to update AI-generated descriptions: ' + error.message);
+    console.error('Error updating AI-generated descriptions:', error);
+    res.status(500).send('Failed to update AI-generated descriptions: ' + error.message);
   }
 });
 
