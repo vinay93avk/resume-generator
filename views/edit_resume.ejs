@@ -24,8 +24,8 @@
             educationDiv.innerHTML = `
                 <input type="text" name="degree[]" placeholder="Degree" required><br>
                 <input type="text" name="institution[]" placeholder="Institution" required><br>
-                <input type="date" name="startDate[]" placeholder="Start Date" required><br>
-                <input type="date" name="endDate[]" placeholder="End Date" required><br>
+                <input type="date" name="education_start_date[]" placeholder="Start Date" required><br>
+                <input type="date" name="education_end_date[]" placeholder="End Date" required><br>
             `;
             container.appendChild(educationDiv);
         }
@@ -80,8 +80,8 @@
                         <div>
                             <input type="text" name="degree[]" placeholder="Degree" value="<%= edu.degree %>" required><br>
                             <input type="text" name="institution[]" placeholder="Institution" value="<%= edu.institution %>" required><br>
-                            <input type="date" name="startDate[]" placeholder="Start Date" value="<%= edu.start_date %>" required><br>
-                            <input type="date" name="endDate[]" placeholder="End Date" value="<%= edu.end_date %>" required><br>
+                            <input type="date" name="education_start_date[]" placeholder="Start Date" value="<%= edu.start_date %>" required><br>
+                            <input type="date" name="education_end_date[]" placeholder="End Date" value="<%= edu.end_date %>" required><br>
                         </div>
                     <% }); %>
                 </div>
