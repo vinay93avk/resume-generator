@@ -1962,6 +1962,50 @@ router.post('/delete_resume/:id', (req, res) => {
   });
 });
 
+router.delete('/delete_resumes/:id', (req, res) => {
+  const resumeId = req.params.id;
+  const userId = req.session.user.id;
+
+  const query = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
+  connection.query(query, [resumeId, userId], (error) => {
+    if (error) {
+      console.error('Error deleting resume:', error);
+      return res.status(500).send('Error deleting resume');
+    }
+
+    // Optionally, delete the associated resume file from S3
+    const getS3UrlQuery = 'SELECT s3_url FROM resumes WHERE id = ? AND user_id = ?';
+    connection.query(getS3UrlQuery, [resumeId, userId], (error, results) => {
+      if (error) {
+        console.error('Error fetching S3 URL:', error);
+        return res.status(500).send('Error fetching S3 URL');
+      }
+
+      if (results.length > 0) {
+        const s3Url = results[0].s3_url;
+        const s3Key = s3Url.split('/').slice(-1)[0];
+
+        const deleteParams = {
+          Bucket: 'resume-generator-ocu',
+          Key: s3Key
+        };
+
+        s3.deleteObject(deleteParams, (s3Err) => {
+          if (s3Err) {
+            console.error('Error deleting S3 object:', s3Err);
+            return res.status(500).send('Error deleting S3 object');
+          }
+
+          // Render a confirmation page after deletion
+          res.render('resume_deleted'); // You can change this view name as needed
+        });
+      } else {
+        // Render a confirmation page after deletion if no S3 URL is found
+        res.render('resume_deleted'); // You can change this view name as needed
+      }
+    });
+  });
+});
 
 
   
