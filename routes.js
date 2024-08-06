@@ -1962,29 +1962,37 @@ router.post('/delete_resume/:id', (req, res) => {
   });
 });
 
-router.delete('/delete_resumes/:id', (req, res) => {
-  const resumeId = req.params.id;
-  const userId = req.session.user.id;
+router.delete('/resume/:email', (req, res) => {
+  const email = req.params.email;
 
-  const query = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
-  connection.query(query, [resumeId, userId], (error) => {
+  // First, fetch the resume to get the user ID and S3 URL
+  const getResumeQuery = 'SELECT * FROM resumes WHERE email = ?';
+  connection.query(getResumeQuery, [email], (error, results) => {
     if (error) {
-      console.error('Error deleting resume:', error);
-      return res.status(500).send('Error deleting resume');
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
     }
 
-    // Optionally, delete the associated resume file from S3
-    const getS3UrlQuery = 'SELECT s3_url FROM resumes WHERE id = ? AND user_id = ?';
-    connection.query(getS3UrlQuery, [resumeId, userId], (error, results) => {
+    if (results.length === 0) {
+      return res.status(404).send('No resume found for the given email');
+    }
+
+    const resume = results[0];
+    const resumeId = resume.id;
+    const userId = resume.user_id;
+    const s3Url = resume.s3_url;
+
+    // Delete the resume from the database
+    const deleteResumeQuery = 'DELETE FROM resumes WHERE id = ? AND user_id = ?';
+    connection.query(deleteResumeQuery, [resumeId, userId], (error) => {
       if (error) {
-        console.error('Error fetching S3 URL:', error);
-        return res.status(500).send('Error fetching S3 URL');
+        console.error('Error deleting resume:', error);
+        return res.status(500).send('Error deleting resume');
       }
 
-      if (results.length > 0) {
-        const s3Url = results[0].s3_url;
+      // Optionally, delete the associated resume file from S3 if it exists
+      if (s3Url) {
         const s3Key = s3Url.split('/').slice(-1)[0];
-
         const deleteParams = {
           Bucket: 'resume-generator-ocu',
           Key: s3Key
