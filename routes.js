@@ -1413,7 +1413,107 @@ router.get('/user/:email/certificates', (req, res) => {
       res.json(results);
     });
   });
-  
+
+  router.post('/user/:email/projects', (req, res) => {
+    const email = req.params.email;
+    const { project_name, github_link } = req.body;
+
+    console.log('Received data:', { project_name, github_link });
+
+    if (!project_name || !github_link) {
+        return res.status(400).send('All fields are required');
+    }
+
+    const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+    connection.query(getUserIdQuery, [email], (error, results) => {
+        if (error) {
+            console.error('Error querying the database:', error);
+            return res.status(500).send('Error querying the database');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const user_id = results[0].id;
+        const insertProjectQuery = 'INSERT INTO Projects (user_id, project_name, github_link, email) VALUES (?, ?, ?, ?)';
+        const values = [user_id, project_name, github_link, email];
+
+        connection.query(insertProjectQuery, values, (error, results) => {
+            if (error) {
+                console.error('Error inserting project:', error);
+                return res.status(500).send('Error inserting project');
+            }
+            console.log('Project added successfully:', results);
+            res.status(201).send('Project added successfully');
+        });
+    });
+});
+
+router.put('/user/:email/projects/:id', (req, res) => {
+  const email = req.params.email;
+  const project_id = req.params.id;
+  const { project_name, github_link } = req.body;
+
+  console.log('Received data:', { project_name, github_link });
+
+  if (!project_name || !github_link) {
+      return res.status(400).send('All fields are required');
+  }
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const updateProjectQuery = 'UPDATE Projects SET project_name = ?, github_link = ?, email = ? WHERE user_id = ? AND id = ?';
+      const values = [project_name, github_link, email, user_id, project_id];
+
+      connection.query(updateProjectQuery, values, (error, results) => {
+          if (error) {
+              console.error('Error updating project:', error);
+              return res.status(500).send('Error updating project');
+          }
+          res.status(200).send('Project updated successfully');
+      });
+  });
+});
+
+router.delete('/user/:email/projects/:id', (req, res) => {
+  const email = req.params.email;
+  const project_id = req.params.id;
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const deleteProjectQuery = 'DELETE FROM Projects WHERE user_id = ? AND id = ?';
+
+      connection.query(deleteProjectQuery, [user_id, project_id], (error, results) => {
+          if (error) {
+              console.error('Error deleting project:', error);
+              return res.status(500).send('Error deleting project');
+          }
+          res.status(200).send('Project deleted successfully');
+      });
+  });
+});
+
   router.get('/user/:email/projects/names', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT p.project_name FROM Projects p JOIN users u ON p.user_id = u.id WHERE u.email = ?';
