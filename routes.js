@@ -818,7 +818,108 @@ router.get('/user/:email/experience', (req, res) => {
       res.json(results);
     });
   });
-  
+
+  router.delete('/user/:email/skills/:id', (req, res) => {
+    const email = req.params.email;
+    const skill_id = req.params.id;
+
+    const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+    connection.query(getUserIdQuery, [email], (error, results) => {
+        if (error) {
+            console.error('Error querying the database:', error);
+            return res.status(500).send('Error querying the database');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('User not found');
+        }
+
+        const user_id = results[0].id;
+        const deleteSkillQuery = 'DELETE FROM Skills WHERE user_id = ? AND id = ?';
+
+        connection.query(deleteSkillQuery, [user_id, skill_id], (error, results) => {
+            if (error) {
+                console.error('Error deleting skill:', error);
+                return res.status(500).send('Error deleting skill');
+            }
+            res.status(200).send('Skill deleted successfully');
+        });
+    });
+});
+
+router.post('/user/:email/skills', (req, res) => {
+  const email = req.params.email;
+  const { skill_name, proficiency_level } = req.body;
+
+  console.log('Received data:', { skill_name, proficiency_level });
+
+  if (!skill_name || !proficiency_level) {
+      return res.status(400).send('All fields are required');
+  }
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const insertSkillQuery = 'INSERT INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
+      const values = [user_id, skill_name, proficiency_level];
+
+      connection.query(insertSkillQuery, values, (error, results) => {
+          if (error) {
+              console.error('Error inserting skill:', error);
+              return res.status(500).send('Error inserting skill');
+          }
+          console.log('Skill added successfully:', results);
+          res.status(201).send('Skill added successfully');
+      });
+  });
+});
+
+
+router.put('/user/:email/skills/:id', (req, res) => {
+  const email = req.params.email;
+  const skill_id = req.params.id;
+  const { skill_name, proficiency_level } = req.body;
+
+  console.log('Received data:', { skill_name, proficiency_level });
+
+  if (!skill_name || !proficiency_level) {
+      return res.status(400).send('All fields are required');
+  }
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const updateSkillQuery = 'UPDATE Skills SET skill_name = ?, proficiency_level = ? WHERE user_id = ? AND id = ?';
+      const values = [skill_name, proficiency_level, user_id, skill_id];
+
+      connection.query(updateSkillQuery, values, (error, results) => {
+          if (error) {
+              console.error('Error updating skill:', error);
+              return res.status(500).send('Error updating skill');
+          }
+          res.status(200).send('Skill updated successfully');
+      });
+  });
+});
+
   router.get('/user/:email/phone', (req, res) => {
     const email = req.params.email;
     const query = 'SELECT phone FROM resumes WHERE email = ?';
