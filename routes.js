@@ -285,6 +285,69 @@ router.get('/comments', (req, res) => {
   });
 });
 
+router.post('/comments', (req, res) => {
+  const { resume_id, admin_id, comment } = req.body;
+
+  if (!resume_id || !admin_id || !comment) {
+    return res.status(400).send('All fields are required');
+  }
+
+  const query = 'INSERT INTO comments (resume_id, admin_id, comment) VALUES (?, ?, ?)';
+  const values = [resume_id, admin_id, comment];
+
+  connection.query(query, values, (error, results) => {
+    if (error) {
+      console.error('Error inserting comment:', error);
+      return res.status(500).send('Error inserting comment');
+    }
+    res.status(201).send('Comment added successfully');
+  });
+});
+
+
+router.put('/comments/:id', (req, res) => {
+  const commentId = req.params.id;
+  const { comment } = req.body;
+
+  if (!comment) {
+    return res.status(400).send('Comment field is required');
+  }
+
+  const query = 'UPDATE comments SET comment = ? WHERE id = ?';
+  const values = [comment, commentId];
+
+  connection.query(query, values, (error, results) => {
+    if (error) {
+      console.error('Error updating comment:', error);
+      return res.status(500).send('Error updating comment');
+    }
+
+    if (results.affectedRows === 0) {
+      return res.status(404).send('Comment not found');
+    }
+
+    res.status(200).send('Comment updated successfully');
+  });
+});
+
+router.delete('/comments/:id', (req, res) => {
+  const commentId = req.params.id;
+
+  const query = 'DELETE FROM comments WHERE id = ?';
+  connection.query(query, [commentId], (error, results) => {
+    if (error) {
+      console.error('Error deleting comment:', error);
+      return res.status(500).send('Error deleting comment');
+    }
+
+    if (results.affectedRows === 0) {
+      return res.status(404).send('Comment not found');
+    }
+
+    res.status(200).send('Comment deleted successfully');
+  });
+});
+
 
 
 router.get('/logout', (req, res) => {
