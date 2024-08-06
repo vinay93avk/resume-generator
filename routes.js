@@ -869,8 +869,8 @@ router.post('/user/:email/skills', (req, res) => {
       }
 
       const user_id = results[0].id;
-      const insertSkillQuery = 'INSERT INTO Skills (user_id, skill_name, proficiency_level) VALUES (?, ?, ?)';
-      const values = [user_id, skill_name, proficiency_level];
+      const insertSkillQuery = 'INSERT INTO Skills (user_id, skill_name, proficiency_level, email) VALUES (?, ?, ?, ?)';
+      const values = [user_id, skill_name, proficiency_level, email];
 
       connection.query(insertSkillQuery, values, (error, results) => {
           if (error) {
@@ -907,8 +907,8 @@ router.put('/user/:email/skills/:id', (req, res) => {
       }
 
       const user_id = results[0].id;
-      const updateSkillQuery = 'UPDATE Skills SET skill_name = ?, proficiency_level = ? WHERE user_id = ? AND id = ?';
-      const values = [skill_name, proficiency_level, user_id, skill_id];
+      const updateSkillQuery = 'UPDATE Skills SET skill_name = ?, proficiency_level = ?, email = ? WHERE user_id = ? AND id = ?';
+      const values = [skill_name, proficiency_level, email, user_id, skill_id];
 
       connection.query(updateSkillQuery, values, (error, results) => {
           if (error) {
