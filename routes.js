@@ -678,6 +678,110 @@ router.get('/user/:email/education', (req, res) => {
   });
 });
 
+// DELETE /user/:email/education/:id
+router.delete('/user/:email/education/:id', (req, res) => {
+  const email = req.params.email;
+  const education_id = req.params.id;
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const deleteEducationQuery = 'DELETE FROM Education WHERE user_id = ? AND id = ?';
+
+      connection.query(deleteEducationQuery, [user_id, education_id], (error, results) => {
+          if (error) {
+              console.error('Error deleting education:', error);
+              return res.status(500).send('Error deleting education');
+          }
+          res.status(200).send('Education deleted successfully');
+      });
+  });
+});
+
+// POST /user/:email/education
+router.post('/user/:email/education', (req, res) => {
+  const email = req.params.email;
+  const { degree, institution, start_date, end_date } = req.body;
+
+  console.log('Received data:', { degree, institution, start_date, end_date });
+
+  if (!degree || !institution || !start_date || !end_date) {
+      return res.status(400).send('All fields are required');
+  }
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const insertEducationQuery = 'INSERT INTO Education (user_id, degree, institution, start_date, end_date, email) VALUES (?, ?, ?, ?, ?, ?)';
+      const values = [user_id, degree, institution, start_date, end_date, email];
+
+      connection.query(insertEducationQuery, values, (error, results) => {
+          if (error) {
+              console.error('Error inserting education:', error);
+              return res.status(500).send('Error inserting education');
+          }
+          console.log('Education added successfully:', results);
+          res.status(201).send('Education added successfully');
+      });
+  });
+});
+
+// PUT /user/:email/education/:id
+router.put('/user/:email/education/:id', (req, res) => {
+  const email = req.params.email;
+  const education_id = req.params.id;
+  const { degree, institution, start_date, end_date } = req.body;
+
+  console.log('Received data:', { degree, institution, start_date, end_date });
+
+  if (!degree || !institution || !start_date || !end_date) {
+      return res.status(400).send('All fields are required');
+  }
+
+  const getUserIdQuery = 'SELECT id FROM users WHERE email = ?';
+  connection.query(getUserIdQuery, [email], (error, results) => {
+      if (error) {
+          console.error('Error querying the database:', error);
+          return res.status(500).send('Error querying the database');
+      }
+
+      if (results.length === 0) {
+          return res.status(404).send('User not found');
+      }
+
+      const user_id = results[0].id;
+      const updateEducationQuery = 'UPDATE Education SET degree = ?, institution = ?, start_date = ?, end_date = ? WHERE user_id = ? AND id = ?';
+      const values = [degree, institution, start_date, end_date, user_id, education_id];
+
+      connection.query(updateEducationQuery, values, (error, results) => {
+          if (error) {
+              console.error('Error updating education:', error);
+              return res.status(500).send('Error updating education');
+          }
+          res.status(200).send('Education updated successfully');
+      });
+  });
+});
+
+
 router.get('/user/:email/experience', (req, res) => {
   const email = req.params.email;
   const query = 'SELECT company_name, role, start_date, end_date, description FROM Experience e JOIN users u ON e.user_id = u.id WHERE u.email = ?';
