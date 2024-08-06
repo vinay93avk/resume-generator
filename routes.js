@@ -1436,8 +1436,8 @@ router.get('/user/:email/certificates', (req, res) => {
         }
 
         const user_id = results[0].id;
-        const insertProjectQuery = 'INSERT INTO Projects (user_id, project_name, github_link, email) VALUES (?, ?, ?, ?)';
-        const values = [user_id, project_name, github_link, email];
+        const insertProjectQuery = 'INSERT INTO Projects (user_id, project_name, github_link) VALUES (?, ?, ?)';
+        const values = [user_id, project_name, github_link];
 
         connection.query(insertProjectQuery, values, (error, results) => {
             if (error) {
@@ -1449,6 +1449,7 @@ router.get('/user/:email/certificates', (req, res) => {
         });
     });
 });
+
 
 router.put('/user/:email/projects/:id', (req, res) => {
   const email = req.params.email;
@@ -1473,8 +1474,8 @@ router.put('/user/:email/projects/:id', (req, res) => {
       }
 
       const user_id = results[0].id;
-      const updateProjectQuery = 'UPDATE Projects SET project_name = ?, github_link = ?, email = ? WHERE user_id = ? AND id = ?';
-      const values = [project_name, github_link, email, user_id, project_id];
+      const updateProjectQuery = 'UPDATE Projects SET project_name = ?, github_link = ? WHERE user_id = ? AND id = ?';
+      const values = [project_name, github_link, user_id, project_id];
 
       connection.query(updateProjectQuery, values, (error, results) => {
           if (error) {
@@ -1485,6 +1486,7 @@ router.put('/user/:email/projects/:id', (req, res) => {
       });
   });
 });
+
 
 router.delete('/user/:email/projects/:id', (req, res) => {
   const email = req.params.email;
@@ -1513,6 +1515,7 @@ router.delete('/user/:email/projects/:id', (req, res) => {
       });
   });
 });
+
 
   router.get('/user/:email/projects/names', (req, res) => {
     const email = req.params.email;
