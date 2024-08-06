@@ -2015,6 +2015,5 @@ router.delete('/resume/:email', (req, res) => {
   });
 });
 
-
   
   module.exports = router;
