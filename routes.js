@@ -265,6 +265,25 @@ router.post('/delete_comment/:id', (req, res) => {
   });
 });
 
+router.get('/comments', (req, res) => {
+  const postId = req.query.postId;
+  let query = 'SELECT * FROM comments';
+  const queryParams = [];
+
+  if (postId) {
+    query += ' WHERE post_id = ?';
+    queryParams.push(postId);
+  }
+
+  connection.query(query, queryParams, (error, results) => {
+    if (error) {
+      console.error('Error querying the database:', error);
+      return res.status(500).send('Error querying the database');
+    }
+
+    res.json(results);
+  });
+});
 
 
 
